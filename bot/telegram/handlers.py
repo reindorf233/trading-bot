@@ -83,6 +83,7 @@ class BotHandlers:
                 InlineKeyboardButton("⚙️ Settings", callback_data="settings")
             ],
             [
+                InlineKeyboardButton("🔗 Share Bot", callback_data="share_bot"),
                 InlineKeyboardButton("❓ Help", callback_data="help")
             ]
         ]
@@ -91,11 +92,14 @@ class BotHandlers:
         
         welcome_msg = (
             "🤖 **Welcome to Trading Analysis Bot!**\n\n"
-            "🔍 *Professional market analysis with AI*\n"
+            "🌍 *Public Trading Analysis for Everyone*\n"
             "• 3-timeframe technical analysis\n"
             "• AI-powered strategy confirmation\n"
-            "• Real-time market data\n\n"
-            "👇 *Choose an option below to get started:*"
+            "• Real-time market data\n"
+            "• Forex, Crypto & Metals\n\n"
+            "👇 *Choose an option below to get started:*\n\n"
+            "🔗 **Share this bot with friends!**\n"
+            "They can analyze any trading pair for free!"
         )
         
         await update.message.reply_text(
@@ -316,6 +320,8 @@ class BotHandlers:
             await self.show_status(query)
         elif data == "settings":
             await self.show_settings(query)
+        elif data == "share_bot":
+            await self.share_bot(query)
         elif data == "help":
             await self.show_help(query)
         elif data.startswith("analyze_"):
@@ -340,6 +346,7 @@ class BotHandlers:
                 InlineKeyboardButton("⚙️ Settings", callback_data="settings")
             ],
             [
+                InlineKeyboardButton("🔗 Share Bot", callback_data="share_bot"),
                 InlineKeyboardButton("❓ Help", callback_data="help")
             ]
         ]
@@ -540,6 +547,45 @@ class BotHandlers:
         
         await query.edit_message_text(
             f"❓ **Help**\n\n{help_msg}",
+            reply_markup=reply_markup,
+            parse_mode="Markdown"
+        )
+    
+    async def share_bot(self, query):
+        """Show bot sharing information."""
+        bot_username = query.message.bot.username
+        
+        share_msg = (
+            "🔗 **Share This Trading Bot!**\n\n"
+            "🌍 *Free Trading Analysis for Everyone*\n\n"
+            f"**Bot Username:** @{bot_username}\n\n"
+            "📱 **How to share:**\n"
+            "1. Click the button below\n"
+            "2. Choose a friend or group\n"
+            "3. Send the bot link\n\n"
+            "✨ **Features your friends get:**\n"
+            "• 📈 Forex, Crypto & Metals analysis\n"
+            "• 🤖 AI-powered strategy confirmation\n"
+            "• ⚡ Real-time market data\n"
+            "• 🎯 Professional trading signals\n"
+            "• 🆓 Completely FREE!\n\n"
+            "🚀 *Start sharing professional trading analysis today!*"
+        )
+        
+        # Create share button (this will open Telegram's share interface)
+        keyboard = [
+            [
+                InlineKeyboardButton("🔗 Share Bot", url=f"https://t.me/{bot_username}")
+            ],
+            [
+                InlineKeyboardButton("🔙 Back to Main", callback_data="back_to_main")
+            ]
+        ]
+        
+        reply_markup = InlineKeyboardMarkup(keyboard)
+        
+        await query.edit_message_text(
+            share_msg,
             reply_markup=reply_markup,
             parse_mode="Markdown"
         )

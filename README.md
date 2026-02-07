@@ -1,6 +1,6 @@
-# 🤖 Professional Trading Bot - Multi-Asset Analysis
+# 🌍 Public Trading Bot - Free Analysis for Everyone
 
-A sophisticated trading analysis bot with **Financial Modeling Prep (FMP)** integration, providing comprehensive market analysis across FX, cryptocurrencies, and metals using a 3-timeframe technical framework.
+A sophisticated **public trading analysis bot** with **Financial Modeling Prep (FMP)** integration, providing comprehensive market analysis across FX, cryptocurrencies, and metals using a 3-timeframe technical framework.
 
 ## 🎯 Features
 
@@ -8,9 +8,15 @@ A sophisticated trading analysis bot with **Financial Modeling Prep (FMP)** inte
 - **⏰ 3-Timeframe Framework**: 4H (bias), 30M (POI), 5M (confirmation)
 - **🔍 Technical Analysis**: BOS/MSS, Order Blocks, Fair Value Gaps, Liquidity Sweeps
 - **🤖 AI Verification**: Optional LLM-based rule confirmation
-- **📱 Public Telegram Bot**: Anyone can use the trading analysis
+- **📱 Public Telegram Bot**: Anyone can use it for FREE
 - **⚡ Real-time Data**: Powered by Financial Modeling Prep (free tier)
 - **🚀 Production Ready**: Docker containerized for Railway deployment
+
+## 🌍 **Try the Bot Now!**
+
+**Bot Link**: [Click here to start using the bot](https://t.me/your_bot_username)
+
+**🔗 Share with friends**: Everyone can use this trading analysis bot for free!
 
 ## 📊 Analysis Framework
 
