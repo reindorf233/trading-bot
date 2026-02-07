@@ -102,22 +102,9 @@ class TradingBot:
             # Setup handlers
             self.handlers.setup_handlers(self.application)
             
-            # Start bot
+            # Start bot with blocking call
             logger.info("Starting trading bot...")
-            await self.application.initialize()
-            await self.application.start()
-            await self.application.updater.start_polling()
-            
-            # Keep the bot running
-            try:
-                # Run indefinitely
-                while True:
-                    await asyncio.sleep(1)
-            except (KeyboardInterrupt, SystemExit):
-                logger.info("Stopping bot...")
-                await self.application.updater.stop()
-                await self.application.stop()
-                await self.application.shutdown()
+            self.application.run_polling()
             
         except Exception as e:
             logger.error(f"Failed to run bot: {e}")
