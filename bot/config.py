@@ -6,7 +6,11 @@ load_dotenv()
 
 class Config:
     # Data Provider Configuration
-    DATA_PROVIDER: str = os.getenv("DATA_PROVIDER", "fmp")  # "oanda", "alphavantage", or "fmp"
+    DATA_PROVIDER: str = os.getenv("DATA_PROVIDER", "deriv")  # "deriv", "fmp"
+    
+    # Deriv Configuration
+    DERIV_API_KEY: str = os.getenv("DERIV_API_KEY", "")
+    DERIV_APP_ID: str = os.getenv("DERIV_APP_ID", "1089")  # Demo app ID
     
     # Financial Modeling Prep Configuration
     FMP_API_KEY: str = os.getenv("FMP_API_KEY", "demo")

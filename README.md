@@ -9,7 +9,7 @@ A sophisticated **public trading analysis bot** with **Financial Modeling Prep (
 - **🔍 Technical Analysis**: BOS/MSS, Order Blocks, Fair Value Gaps, Liquidity Sweeps
 - **🤖 AI Verification**: Optional LLM-based rule confirmation
 - **📱 Public Telegram Bot**: Anyone can use it for FREE
-- **⚡ Real-time Data**: Powered by Financial Modeling Prep (free tier)
+- **⚡ Real-time Data**: Powered by Deriv API (free) or FMP (free tier)
 - **🚀 Production Ready**: Docker containerized for Railway deployment
 
 ## 🌍 **Try the Bot Now!**
