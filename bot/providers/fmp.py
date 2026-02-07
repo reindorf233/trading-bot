@@ -17,13 +17,15 @@ class FMPProvider(MarketDataProvider):
     
     def __init__(self):
         self.config = Config()
-        self.api_key = getattr(self.config, 'FMP_API_KEY', '')
+        self.api_key = getattr(self.config, 'FMP_API_KEY', 'demo')
         self.base_url = "https://financialmodelingprep.com/stable"
         
-        # FMP doesn't require API key for basic endpoints
-        # But we'll support it if provided
-        if not self.api_key:
-            self.api_key = "demo"  # Use demo key
+        # FMP API key validation
+        if not self.api_key or self.api_key == "demo":
+            # Try without API key first (some endpoints work without it)
+            self.use_api_key = False
+        else:
+            self.use_api_key = True
     
     def normalize_symbol(self, symbol: str) -> str:
         """Normalize symbol to FMP format."""
@@ -72,16 +74,18 @@ class FMPProvider(MarketDataProvider):
                 # Crypto endpoint
                 url = f"{self.base_url}/historical-chart/{fmp_timeframe}"
                 params = {
-                    "symbol": normalized_symbol,
-                    "apikey": self.api_key
+                    "symbol": normalized_symbol
                 }
+                if self.use_api_key:
+                    params["apikey"] = self.api_key
             elif is_metal:
                 # Metals use forex endpoints (commodities)
                 url = f"{self.base_url}/historical-chart/{fmp_timeframe}"
                 params = {
-                    "symbol": normalized_symbol,
-                    "apikey": self.api_key
+                    "symbol": normalized_symbol
                 }
+                if self.use_api_key:
+                    params["apikey"] = self.api_key
             else:
                 # Forex endpoint
                 if fmp_timeframe == "historical-price-eod/full":
@@ -90,15 +94,37 @@ class FMPProvider(MarketDataProvider):
                     url = f"{self.base_url}/historical-chart/{fmp_timeframe}"
                 
                 params = {
-                    "symbol": normalized_symbol,
-                    "apikey": self.api_key
+                    "symbol": normalized_symbol
                 }
+                if self.use_api_key:
+                    params["apikey"] = self.api_key
             
             # Fetch data
             async with httpx.AsyncClient() as client:
-                response = await client.get(url, params=params, timeout=30.0)
-                response.raise_for_status()
-                data = response.json()
+                try:
+                    response = await client.get(url, params=params, timeout=30.0)
+                    
+                    # Handle specific error cases
+                    if response.status_code == 401:
+                        if self.use_api_key:
+                            raise DataProviderError("Invalid API key. Please check your FMP_API_KEY or use demo access.")
+                        else:
+                            raise DataProviderError("API key required for this endpoint. Please get a free API key from financialmodelingprep.com")
+                    elif response.status_code == 429:
+                        raise DataProviderError("Rate limit exceeded. Please try again later or upgrade your API plan.")
+                    elif response.status_code >= 400:
+                        error_msg = f"FMP API error: {response.status_code}"
+                        if response.text:
+                            error_msg += f" - {response.text[:200]}"
+                        raise DataProviderError(error_msg)
+                    
+                    response.raise_for_status()
+                    data = response.json()
+                    
+                except httpx.HTTPError as e:
+                    raise DataProviderError(f"HTTP error fetching data: {str(e)}")
+                except Exception as e:
+                    raise DataProviderError(f"Error fetching data from FMP: {str(e)}")
             
             # Parse response
             candles = []
