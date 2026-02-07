@@ -10,6 +10,13 @@ class MessageFormatter:
     def format_signal_message(result: SignalResult) -> str:
         """Format complete signal analysis result."""
         
+        # Helper function to escape special characters for Telegram
+        def escape_markdown(text):
+            if not text:
+                return text
+            # Escape characters that break Telegram Markdown
+            return str(text).replace('*', '\\*').replace('_', '\\_').replace('`', '\\`').replace('[', '\\[').replace(']', '\\]')
+        
         # Determine emoji based on decision
         if result.decision == "BUY":
             emoji = "🟢"
@@ -23,7 +30,7 @@ class MessageFormatter:
         
         # Build message sections
         lines = [
-            f"{emoji} {result.symbol} Analysis",
+            f"{emoji} {escape_markdown(result.symbol)} Analysis",
             f"🕐 {result.timestamp.strftime('%Y-%m-%d %H:%M UTC')}",
             f"📊 Timeframes: 4H | 30M | 5M",
             "",
@@ -34,9 +41,9 @@ class MessageFormatter:
         # Bias section
         lines.extend([
             "📈 MARKET BIAS:",
-            f"Direction: {result.bias}",
-            f"4H Trend: {result.trend_4h}",
-            f"4H Event: {result.bos_mss_4h}",
+            f"Direction: {escape_markdown(result.bias)}",
+            f"4H Trend: {escape_markdown(result.trend_4h)}",
+            f"4H Event: {escape_markdown(result.bos_mss_4h)}",
         ])
         
         if result.swing_high_4h:
@@ -49,8 +56,8 @@ class MessageFormatter:
         # POI section
         lines.extend([
             "🎯 POINT OF INTEREST:",
-            f"Type: {result.poi_type or 'None'}",
-            f"Zone: {result.poi_zone or 'N/A'}",
+            f"Type: {escape_markdown(result.poi_type) or 'None'}",
+            f"Zone: {escape_markdown(result.poi_zone) or 'N/A'}",
         ])
         
         if result.poi_strength:
@@ -67,8 +74,8 @@ class MessageFormatter:
         if result.sweep_details:
             details = result.sweep_details
             lines.extend([
-                f"Pool Type: {details.get('type', 'N/A')}",
-                f"Sweep Price: {details.get('sweep_price', 'N/A')}",
+                f"Pool Type: {escape_markdown(details.get('type', 'N/A'))}",
+                f"Sweep Price: {escape_markdown(details.get('sweep_price', 'N/A'))}",
             ])
         
         lines.append("")
@@ -76,7 +83,7 @@ class MessageFormatter:
         # Confirmation section
         lines.extend([
             "⚡ CONFIRMATION:",
-            f"Pattern: {result.confirmation_pattern or 'None'}",
+            f"Pattern: {escape_markdown(result.confirmation_pattern) or 'None'}",
         ])
         
         if result.confirmation_confidence:
@@ -88,10 +95,10 @@ class MessageFormatter:
         if result.decision in ["BUY", "SELL"] and result.entry_zone:
             lines.extend([
                 "💼 TRADE PLAN:",
-                f"Entry Zone: {result.entry_zone}",
-                f"Invalidation: {result.invalidation_level or 'N/A'}",
-                f"Target 1: {result.target1 or 'N/A'}",
-                f"Target 2: {result.target2 or 'N/A'}",
+                f"Entry Zone: {escape_markdown(result.entry_zone)}",
+                f"Invalidation: {escape_markdown(result.invalidation_level) or 'N/A'}",
+                f"Target 1: {escape_markdown(result.target1) or 'N/A'}",
+                f"Target 2: {escape_markdown(result.target2) or 'N/A'}",
                 ""
             ])
         
@@ -101,13 +108,14 @@ class MessageFormatter:
         ])
         
         for aspect, reason in result.ai_reasons.items():
-            lines.append(f"{aspect.title()}: {reason}")
+            lines.append(f"{escape_markdown(aspect).title()}: {escape_markdown(reason)}")
         
         if result.missing_conditions:
-            lines.append("Missing: " + ", ".join(result.missing_conditions))
+            escaped_conditions = [escape_markdown(cond) for cond in result.missing_conditions]
+            lines.append("Missing: " + ", ".join(escaped_conditions))
         
         if result.risk_notes:
-            lines.append(f"Risk: {result.risk_notes}")
+            lines.append(f"Risk: {escape_markdown(result.risk_notes)}")
         
         lines.append("")
         
@@ -170,4 +178,10 @@ class MessageFormatter:
     @staticmethod
     def format_error_message(error: str) -> str:
         """Format error message."""
-        return f"❌ Error: {error}"
+        # Escape special characters in error message
+        def escape_markdown(text):
+            if not text:
+                return text
+            return str(text).replace('*', '\\*').replace('_', '\\_').replace('`', '\\`').replace('[', '\\[').replace(']', '\\]')
+        
+        return f"❌ Error: {escape_markdown(error)}"
