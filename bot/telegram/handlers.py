@@ -2,9 +2,9 @@ import logging
 from typing import Optional
 from datetime import datetime
 
-from telegram import Update
+from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import (
-    Application, CommandHandler, MessageHandler,
+    Application, CommandHandler, MessageHandler, CallbackQueryHandler,
     ContextTypes, filters
 )
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
@@ -26,13 +26,34 @@ class BotHandlers:
         self.config = config
         self.auth = AuthManager(config)
         
+        # Asset categories and pairs
+        self.asset_categories = {
+            "forex": {
+                "name": "📈 Forex Pairs",
+                "pairs": [
+                    "EURUSD", "GBPUSD", "USDJPY", "USDCHF", "AUDUSD", "NZDUSD",
+                    "EURGBP", "EURJPY", "GBPJPY", "EURCHF", "USDCAD", "EURAUD"
+                ]
+            },
+            "crypto": {
+                "name": "🪙 Cryptocurrencies",
+                "pairs": [
+                    "BTCUSD", "ETHUSD", "BNBUSD", "ADAUSD", "SOLUSD", "XRPUSD",
+                    "DOGEUSD", "MATICUSD", "DOTUSD", "AVAXUSD", "LINKUSD", "UNIUSD"
+                ]
+            },
+            "metals": {
+                "name": "🥇 Metals",
+                "pairs": ["XAUUSD", "XAGUSD", "XPTUSD", "XPDUSD"]
+            }
+        }
+        
         # Initialize data provider based on configuration
-        if config.DATA_PROVIDER == "alphavantage":
-            self.provider = AlphaVantageProvider()
-        elif config.DATA_PROVIDER == "fmp":
+        if config.DATA_PROVIDER == "fmp":
             self.provider = FMPProvider()
         else:
-            self.provider = OandaProvider()
+            # Default to FMP provider
+            self.provider = FMPProvider()
             
         self.signal_engine = SignalEngine(self.provider, config)
         self.storage = BotStorage()
@@ -43,22 +64,45 @@ class BotHandlers:
         self.scheduled_jobs = {}  # user_id -> job_id
     
     async def start_command(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
-        """Handle /start command."""
+        """Handle /start command with modern menu."""
         if not await self.auth.check_access(update, context):
             return
         
+        # Create main menu keyboard
+        keyboard = [
+            [
+                InlineKeyboardButton("📈 Forex Pairs", callback_data="menu_forex"),
+                InlineKeyboardButton("🪙 Crypto", callback_data="menu_crypto")
+            ],
+            [
+                InlineKeyboardButton("🥇 Metals", callback_data="menu_metals"),
+                InlineKeyboardButton("⚡ Quick Analysis", callback_data="quick_analyze")
+            ],
+            [
+                InlineKeyboardButton("📊 My Status", callback_data="status"),
+                InlineKeyboardButton("⚙️ Settings", callback_data="settings")
+            ],
+            [
+                InlineKeyboardButton("❓ Help", callback_data="help")
+            ]
+        ]
+        
+        reply_markup = InlineKeyboardMarkup(keyboard)
+        
         welcome_msg = (
-            "🤖 Welcome to the Trading Analysis Bot!\n\n"
-            "I analyze FX pairs, cryptocurrencies, and metals using 3-timeframe framework:\n"
-            "• 4H for market bias\n"
-            "• 30M for POI detection\n"
-            "• 5M for entry confirmation\n"
-            "• AI-powered strategy confirmation\n\n"
-            f"Default symbol: {self.config.DEFAULT_SYMBOL}\n\n"
-            "Use /analyze to get started or /help for commands."
+            "🤖 **Welcome to Trading Analysis Bot!**\n\n"
+            "🔍 *Professional market analysis with AI*\n"
+            "• 3-timeframe technical analysis\n"
+            "• AI-powered strategy confirmation\n"
+            "• Real-time market data\n\n"
+            "👇 *Choose an option below to get started:*"
         )
         
-        await update.message.reply_text(welcome_msg)
+        await update.message.reply_text(
+            welcome_msg,
+            reply_markup=reply_markup,
+            parse_mode="Markdown"
+        )
     
     async def help_command(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
         """Handle /help command."""
@@ -253,6 +297,253 @@ class BotHandlers:
             "❓ Unknown command. Use /help for available commands."
         )
     
+    async def button_callback(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
+        """Handle inline keyboard button callbacks."""
+        query = update.callback_query
+        await query.answer()
+        
+        data = query.data
+        
+        if data == "menu_forex":
+            await self.show_forex_menu(query)
+        elif data == "menu_crypto":
+            await self.show_crypto_menu(query)
+        elif data == "menu_metals":
+            await self.show_metals_menu(query)
+        elif data == "quick_analyze":
+            await self.quick_analyze(query)
+        elif data == "status":
+            await self.show_status(query)
+        elif data == "settings":
+            await self.show_settings(query)
+        elif data == "help":
+            await self.show_help(query)
+        elif data.startswith("analyze_"):
+            symbol = data.replace("analyze_", "")
+            await self.analyze_symbol(query, symbol)
+        elif data == "back_to_main":
+            await self.show_main_menu(query)
+    
+    async def show_main_menu(self, query):
+        """Show main menu."""
+        keyboard = [
+            [
+                InlineKeyboardButton("📈 Forex Pairs", callback_data="menu_forex"),
+                InlineKeyboardButton("🪙 Crypto", callback_data="menu_crypto")
+            ],
+            [
+                InlineKeyboardButton("🥇 Metals", callback_data="menu_metals"),
+                InlineKeyboardButton("⚡ Quick Analysis", callback_data="quick_analyze")
+            ],
+            [
+                InlineKeyboardButton("📊 My Status", callback_data="status"),
+                InlineKeyboardButton("⚙️ Settings", callback_data="settings")
+            ],
+            [
+                InlineKeyboardButton("❓ Help", callback_data="help")
+            ]
+        ]
+        
+        reply_markup = InlineKeyboardMarkup(keyboard)
+        
+        welcome_msg = (
+            "🤖 **Trading Analysis Bot**\n\n"
+            "👇 *Choose an option:*"
+        )
+        
+        await query.edit_message_text(
+            welcome_msg,
+            reply_markup=reply_markup,
+            parse_mode="Markdown"
+        )
+    
+    async def show_forex_menu(self, query):
+        """Show forex pairs menu."""
+        pairs = self.asset_categories["forex"]["pairs"]
+        
+        # Create keyboard with pairs in rows of 2
+        keyboard = []
+        for i in range(0, len(pairs), 2):
+            row = []
+            if i < len(pairs):
+                row.append(InlineKeyboardButton(pairs[i], callback_data=f"analyze_{pairs[i]}"))
+            if i + 1 < len(pairs):
+                row.append(InlineKeyboardButton(pairs[i+1], callback_data=f"analyze_{pairs[i+1]}"))
+            keyboard.append(row)
+        
+        # Add back button
+        keyboard.append([InlineKeyboardButton("🔙 Back to Main", callback_data="back_to_main")])
+        
+        reply_markup = InlineKeyboardMarkup(keyboard)
+        
+        await query.edit_message_text(
+            "📈 **Select Forex Pair:**\n\n*Choose a pair to analyze:*",
+            reply_markup=reply_markup,
+            parse_mode="Markdown"
+        )
+    
+    async def show_crypto_menu(self, query):
+        """Show crypto menu."""
+        pairs = self.asset_categories["crypto"]["pairs"]
+        
+        keyboard = []
+        for i in range(0, len(pairs), 2):
+            row = []
+            if i < len(pairs):
+                row.append(InlineKeyboardButton(pairs[i], callback_data=f"analyze_{pairs[i]}"))
+            if i + 1 < len(pairs):
+                row.append(InlineKeyboardButton(pairs[i+1], callback_data=f"analyze_{pairs[i+1]}"))
+            keyboard.append(row)
+        
+        keyboard.append([InlineKeyboardButton("🔙 Back to Main", callback_data="back_to_main")])
+        
+        reply_markup = InlineKeyboardMarkup(keyboard)
+        
+        await query.edit_message_text(
+            "🪙 **Select Cryptocurrency:**\n\n*Choose a crypto to analyze:*",
+            reply_markup=reply_markup,
+            parse_mode="Markdown"
+        )
+    
+    async def show_metals_menu(self, query):
+        """Show metals menu."""
+        pairs = self.asset_categories["metals"]["pairs"]
+        
+        keyboard = []
+        for i in range(0, len(pairs), 2):
+            row = []
+            if i < len(pairs):
+                row.append(InlineKeyboardButton(pairs[i], callback_data=f"analyze_{pairs[i]}"))
+            if i + 1 < len(pairs):
+                row.append(InlineKeyboardButton(pairs[i+1], callback_data=f"analyze_{pairs[i+1]}"))
+            keyboard.append(row)
+        
+        keyboard.append([InlineKeyboardButton("🔙 Back to Main", callback_data="back_to_main")])
+        
+        reply_markup = InlineKeyboardMarkup(keyboard)
+        
+        await query.edit_message_text(
+            "🥇 **Select Metal:**\n\n*Choose a metal to analyze:*",
+            reply_markup=reply_markup,
+            parse_mode="Markdown"
+        )
+    
+    async def quick_analyze(self, query):
+        """Quick analysis of default symbol."""
+        symbol = self.config.DEFAULT_SYMBOL
+        await self.analyze_symbol(query, symbol)
+    
+    async def analyze_symbol(self, query, symbol):
+        """Analyze a specific symbol."""
+        # Show loading message
+        await query.edit_message_text(
+            f"🔄 **Analyzing {symbol}...**\n\n*Please wait, this may take a few seconds.*",
+            parse_mode="Markdown"
+        )
+        
+        try:
+            # Perform analysis
+            result = await self.signal_engine.analyze_symbol(symbol)
+            
+            # Store result
+            user_id = query.from_user.id
+            await self.storage.save_analysis(result)
+            
+            # Format and send result
+            message = MessageFormatter.format_signal_message(result)
+            
+            # Add back button to result
+            keyboard = [[InlineKeyboardButton("🔙 Back to Main", callback_data="back_to_main")]]
+            reply_markup = InlineKeyboardMarkup(keyboard)
+            
+            await query.edit_message_text(
+                message,
+                reply_markup=reply_markup,
+                parse_mode="Markdown"
+            )
+            
+        except Exception as e:
+            logger.error(f"Analysis failed: {e}")
+            error_msg = MessageFormatter.format_error_message(str(e))
+            
+            keyboard = [[InlineKeyboardButton("🔙 Back to Main", callback_data="back_to_main")]]
+            reply_markup = InlineKeyboardMarkup(keyboard)
+            
+            await query.edit_message_text(
+                error_msg,
+                reply_markup=reply_markup,
+                parse_mode="Markdown"
+            )
+    
+    async def show_status(self, query):
+        """Show user status."""
+        user_id = query.from_user.id
+        
+        # Get last analysis
+        last_analysis = await self.storage.get_last_analysis(user_id)
+        
+        # Get scheduled jobs info
+        job_info = ""
+        if user_id in self.scheduled_jobs:
+            job_id = self.scheduled_jobs[user_id]
+            job = self.scheduler.get_job(job_id)
+            if job:
+                job_info = f"\n⏰ **Scheduled Analysis:** Every {job.trigger.interval} minutes"
+        
+        # Format status message
+        status_msg = MessageFormatter.format_status_message(last_analysis)
+        status_msg += job_info
+        
+        keyboard = [[InlineKeyboardButton("🔙 Back to Main", callback_data="back_to_main")]]
+        reply_markup = InlineKeyboardMarkup(keyboard)
+        
+        await query.edit_message_text(
+            f"📊 **Your Status**\n\n{status_msg}",
+            reply_markup=reply_markup,
+            parse_mode="Markdown"
+        )
+    
+    async def show_settings(self, query):
+        """Show settings menu."""
+        keyboard = [
+            [
+                InlineKeyboardButton("📈 Set Default Symbol", callback_data="set_symbol"),
+                InlineKeyboardButton("⏰ Set Watch List", callback_data="set_watch")
+            ],
+            [
+                InlineKeyboardButton("🔙 Back to Main", callback_data="back_to_main")
+            ]
+        ]
+        
+        reply_markup = InlineKeyboardMarkup(keyboard)
+        
+        settings_msg = (
+            "⚙️ **Settings**\n\n"
+            "• Set default trading symbol\n"
+            "• Configure watch lists\n"
+            "• Analysis preferences\n\n"
+            "*Choose an option below:*"
+        )
+        
+        await query.edit_message_text(
+            settings_msg,
+            reply_markup=reply_markup,
+            parse_mode="Markdown"
+        )
+    
+    async def show_help(self, query):
+        """Show help information."""
+        help_msg = MessageFormatter.format_help_message()
+        
+        keyboard = [[InlineKeyboardButton("🔙 Back to Main", callback_data="back_to_main")]]
+        reply_markup = InlineKeyboardMarkup(keyboard)
+        
+        await query.edit_message_text(
+            f"❓ **Help**\n\n{help_msg}",
+            reply_markup=reply_markup,
+            parse_mode="Markdown"
+        )
+    
     def setup_handlers(self, app: Application):
         """Setup all command handlers."""
         app.add_handler(CommandHandler("start", self.start_command))
@@ -262,6 +553,9 @@ class BotHandlers:
         app.add_handler(CommandHandler("status", self.status_command))
         app.add_handler(CommandHandler("watch", self.watch_command))
         app.add_handler(CommandHandler("stopwatch", self.stopwatch_command))
+        
+        # Add callback query handler for inline keyboards
+        app.add_handler(CallbackQueryHandler(self.button_callback))
         
         # Handle unknown commands
         app.add_handler(MessageHandler(filters.COMMAND, self.unknown_command))
