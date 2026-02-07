@@ -11,7 +11,7 @@ from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from apscheduler.triggers.interval import IntervalTrigger
 
 from ..config import Config
-from ..providers import OandaProvider, AlphaVantageProvider, FMPProvider
+from ..providers import FMPProvider
 from ..analysis import SignalEngine
 from .auth import AuthManager
 from .formatters import MessageFormatter
@@ -27,12 +27,11 @@ class BotHandlers:
         self.auth = AuthManager(config)
         
         # Initialize data provider based on configuration
-        if config.DATA_PROVIDER == "alphavantage":
-            self.provider = AlphaVantageProvider()
-        elif config.DATA_PROVIDER == "fmp":
+        if config.DATA_PROVIDER == "fmp":
             self.provider = FMPProvider()
         else:
-            self.provider = OandaProvider()
+            # Default to FMP provider
+            self.provider = FMPProvider()
             
         self.signal_engine = SignalEngine(self.provider, config)
         self.storage = BotStorage()
