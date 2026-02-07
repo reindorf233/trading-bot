@@ -86,23 +86,21 @@ class DerivProvider(MarketDataProvider):
         
         deriv_symbol = symbol_map.get(normalized_symbol, f"frx{normalized_symbol}")
         
-        # Build request
-        request_data = {
-            "ticks_history": deriv_symbol,
-            "adjust_start_time": 1,
-            "count": count,
-            "end": "latest",
-            "start": (datetime.now() - timedelta(days=30)).timestamp(),
-            "style": "candles",
-            "granularity": int(deriv_timeframe)
-        }
-        
-        # Fetch data
+        # Fetch data using correct Deriv API endpoint
         async with httpx.AsyncClient() as client:
             try:
-                response = await client.post(
-                    f"{self.base_url}/api/v2/ticks",
-                    json=request_data,
+                # Use the correct Deriv API endpoint for historical data
+                response = await client.get(
+                    f"{self.base_url}/api/v2/ticks_history",
+                    params={
+                        "ticks_history": deriv_symbol,
+                        "adjust_start_time": 1,
+                        "count": count,
+                        "end": "latest",
+                        "start": int((datetime.now() - timedelta(days=30)).timestamp()),
+                        "style": "candles",
+                        "granularity": int(deriv_timeframe)
+                    },
                     timeout=30.0
                 )
                 
@@ -168,7 +166,13 @@ class DerivProvider(MarketDataProvider):
         try:
             async with httpx.AsyncClient() as client:
                 response = await client.get(
-                    f"{self.base_url}/api/v2/active_symbols",
+                    f"{self.base_url}/api/v2/ticks_history",
+                    params={
+                        "ticks_history": "frxEURUSD",
+                        "count": 1,
+                        "style": "candles",
+                        "granularity": 60
+                    },
                     timeout=10.0
                 )
                 return response.status_code == 200
