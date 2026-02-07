@@ -1,18 +1,16 @@
-# Private Telegram Trading Assistant Bot
+# 🤖 Professional Trading Bot - Multi-Asset Analysis
 
-A sophisticated FX trading analysis bot that provides market analysis using a 3-timeframe framework. The bot analyzes currency pairs and sends BUY/SELL/NO-TRADE confirmations based on strict technical rules.
+A sophisticated trading analysis bot with **Financial Modeling Prep (FMP)** integration, providing comprehensive market analysis across FX, cryptocurrencies, and metals using a 3-timeframe technical framework.
 
 ## 🎯 Features
 
-- **3-Timeframe Analysis**: 4H (bias), 30M (POI), 5M (confirmation)
-- **Market Structure Analysis**: BOS (Break of Structure) and MSS (Market Structure Shift)
-- **POI Detection**: Order Blocks, Fair Value Gaps, Breakers, Rejection Blocks
-- **Liquidity Analysis**: Sweep detection into POI zones
-- **Confirmation Patterns**: Morning/Evening Stars, Break Entries, Rejections
-- **AI Verification**: Optional LLM-based rule verification
-- **Private Bot**: Single-user authorization for privacy
-- **Scheduled Analysis**: Automated analysis at custom intervals
-- **OANDA Integration**: Real-time FX data feed
+- **📊 Multi-Asset Analysis**: 17 FX pairs + 7 cryptocurrencies + 4 metals
+- **⏰ 3-Timeframe Framework**: 4H (bias), 30M (POI), 5M (confirmation)
+- **🔍 Technical Analysis**: BOS/MSS, Order Blocks, Fair Value Gaps, Liquidity Sweeps
+- **🤖 AI Verification**: Optional LLM-based rule confirmation
+- **📱 Private Telegram Bot**: Single-user authorization for privacy
+- **⚡ Real-time Data**: Powered by Financial Modeling Prep (free tier)
+- **🚀 Production Ready**: Docker containerized for Railway deployment
 
 ## 📊 Analysis Framework
 
