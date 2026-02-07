@@ -8,15 +8,8 @@ class Config:
     # Data Provider Configuration
     DATA_PROVIDER: str = os.getenv("DATA_PROVIDER", "fmp")  # "oanda", "alphavantage", or "fmp"
     
-    # OANDA Configuration
-    OANDA_API_KEY: str = os.getenv("OANDA_API_KEY", "")
-    OANDA_ACCOUNT_ID: str = os.getenv("OANDA_ACCOUNT_ID", "")
-    OANDA_ENVIRONMENT: str = os.getenv("OANDA_ENVIRONMENT", "practice")
-    OANDA_BASE_URL: str = "https://api-fxpractice.oanda.com/v3" if OANDA_ENVIRONMENT == "practice" else "https://api-fxtrade.oanda.com/v3"
-    
-    # Alpha Vantage Configuration
-    ALPHA_VANTAGE_API_KEY: str = os.getenv("ALPHA_VANTAGE_API_KEY", "")
-    ALPHA_VANTAGE_BASE_URL: str = "https://www.alphavantage.co/query"
+    # Financial Modeling Prep Configuration
+    FMP_API_KEY: str = os.getenv("FMP_API_KEY", "demo")
     
     # Telegram Configuration
     TELEGRAM_BOT_TOKEN: str = os.getenv("TELEGRAM_BOT_TOKEN", "")
@@ -53,10 +46,5 @@ class Config:
             raise ValueError("TELEGRAM_ALLOWED_USER_ID must be set")
         
         # Validate data provider configuration
-        if cls.DATA_PROVIDER == "oanda" and not cls.OANDA_API_KEY:
-            raise ValueError("OANDA_API_KEY required when using OANDA provider")
-        
-        if cls.DATA_PROVIDER == "alphavantage" and not cls.ALPHA_VANTAGE_API_KEY:
-            raise ValueError("ALPHA_VANTAGE_API_KEY required when using Alpha Vantage provider")
-        
+        # FMP provider works with demo key, no validation needed
         return True
