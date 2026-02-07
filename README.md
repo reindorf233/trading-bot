@@ -1,6 +1,6 @@
-# 🌍 Public Trading Bot - Free Analysis for Everyone
+# 🌍 Public Trading Bot - Free Analysis with Deriv
 
-A sophisticated **public trading analysis bot** with **Financial Modeling Prep (FMP)** integration, providing comprehensive market analysis across FX, cryptocurrencies, and metals using a 3-timeframe technical framework.
+A sophisticated **public trading analysis bot** with **Deriv API** integration, providing comprehensive market analysis across FX, cryptocurrencies, and metals using a 3-timeframe technical framework.
 
 ## 🎯 Features
 
@@ -9,14 +9,12 @@ A sophisticated **public trading analysis bot** with **Financial Modeling Prep (
 - **🔍 Technical Analysis**: BOS/MSS, Order Blocks, Fair Value Gaps, Liquidity Sweeps
 - **🤖 AI Verification**: Optional LLM-based rule confirmation
 - **📱 Public Telegram Bot**: Anyone can use it for FREE
-- **⚡ Real-time Data**: Powered by Deriv API (free) or FMP (free tier)
+- **⚡ Real-time Data**: Powered by Deriv API (completely free, no API key)
 - **🚀 Production Ready**: Docker containerized for Railway deployment
 
 ## 🌍 **Try the Bot Now!**
 
 **Bot Link**: [Click here to start using @rulerfxbot](https://t.me/rulerfxbot)
-
-**🔗 Share with friends**: Everyone can use this trading analysis bot for free!
 
 ## 📊 Analysis Framework
 
@@ -28,247 +26,204 @@ A sophisticated **public trading analysis bot** with **Financial Modeling Prep (
 ### 4-Step Signal Rules
 1. **Direction**: Clear bias from 4H BOS/MSS
 2. **POI**: Valid zone aligned with bias (OB/FVG minimum)
-3. **Liquidity**: Sweep into/near POI required
-4. **Confirmation**: 5M trigger aligned with bias
+3. **Liquidity**: Sweep narrative supporting bias
+4. **Confirmation**: Entry trigger aligned with POI
 
-Only when ALL steps pass does the bot generate ✅ BUY or ✅ SELL signals.
+### AI-Powered Verification
+- **Strategy Confirmation**: OpenAI GPT validates signal logic
+- **Risk Assessment**: AI evaluates missing conditions
+- **Confidence Scoring**: AI provides probability estimates
+- **Rule Compliance**: Ensures all technical rules met
 
-## 🚀 Quick Start
+## 🚀 **Technology Stack**
 
-### 1. Installation
+### Data Provider: Deriv API
+- **🆓 Completely Free**: No subscription required
+- **⚡ Real-time Data**: Live market prices
+- **🔄 No Rate Limits**: Unlimited requests
+- **🌍 Global Access**: Available worldwide
+- **📈 Multiple Assets**: FX, crypto, metals
 
+### Supported Assets
+
+#### Forex Pairs
+- **Major**: EURUSD, GBPUSD, USDJPY, USDCHF
+- **Commodity**: AUDUSD, NZDUSD, USDCAD
+- **Cross**: EURGBP, EURJPY, GBPJPY, EURAUD
+
+#### Cryptocurrencies
+- **Top Coins**: BTCUSD, ETHUSD, LTCUSD, BCHUSD
+- **Altcoins**: ADAUSD, SOLUSD, XRPUSD, DOGEUSD
+
+#### Metals
+- **Precious**: XAUUSD (Gold), XAGUSD (Silver)
+
+### Technical Indicators
+- **Market Structure**: BOS/MSS analysis
+- **Order Blocks**: Smart money concepts
+- **Fair Value Gaps**: Imbalance detection
+- **Liquidity Sweeps**: Stop hunt identification
+- **Swing Analysis**: High/low pattern recognition
+
+## 🤖 **Bot Features**
+
+### Interactive Interface
+- **🎨 Modern Menus**: Beautiful inline keyboards
+- **📱 Mobile Optimized**: Perfect for Telegram
+- **🔗 Easy Sharing**: One-click bot sharing
+- **⚡ Quick Analysis**: One-tap symbol analysis
+
+### Analysis Capabilities
+- **📊 Real-time Signals**: Live market analysis
+- **🤖 AI Confirmation**: Strategy validation
+- **📈 Multi-timeframe**: 4H/30M/5M analysis
+- **🎯 Risk Management**: Entry/exit levels
+
+### User Experience
+- **🆓 Completely Free**: No charges or restrictions
+- **🌍 Public Access**: Anyone can use the bot
+- **📊 Professional Results**: High-quality analysis
+- **🔔 Instant Updates**: Real-time notifications
+
+## 📱 **How to Use**
+
+### Quick Start
+1. **Open Telegram**: Search for `@rulerfxbot`
+2. **Start Bot**: Send `/start` command
+3. **Choose Asset**: Select from interactive menu
+4. **Get Analysis**: Receive professional trading signals
+
+### Available Commands
+- `/start` - Show main menu
+- `/analyze [SYMBOL]` - Analyze specific symbol
+- `/help` - Show help information
+- `/status` - View last analysis
+
+### Interactive Menu
 ```bash
-# Clone the repository
-git clone <repository-url>
+📈 Forex Pairs    🪙 Crypto
+🥇 Metals        ⚡ Quick Analysis  
+📊 My Status     ⚙️ Settings
+🔗 Share Bot     ❓ Help
+```
+
+## 🚀 **Deployment**
+
+### Railway Deployment
+```bash
+# Environment Variables
+DATA_PROVIDER=deriv
+DERIV_APP_ID=1089
+TELEGRAM_BOT_TOKEN=your_bot_token
+TELEGRAM_ALLOWED_USER_ID=your_user_id
+OPENAI_API_KEY=your_openai_key
+```
+
+### Quick Deploy
+1. **Push to GitHub**: `git push origin main`
+2. **Connect Railway**: Link your GitHub repository
+3. **Set Environment**: Add required variables
+4. **Deploy**: Railway builds and deploys automatically
+
+## 🛠️ **Local Development**
+
+### Setup
+```bash
+# Clone repository
+git clone https://github.com/reindorf233/trading-bot.git
 cd trading-bot
 
 # Install dependencies
 pip install -r requirements.txt
-```
 
-### 2. Get Alpha Vantage API Key (Recommended)
-
-Alpha Vantage offers a **free tier** with 500 requests/day:
-
-1. Go to [Alpha Vantage](https://www.alphavantage.co/support/#api-key)
-2. Sign up for a free account
-3. Get your API key from the dashboard
-4. No credit card required for free tier
-
-### 3. Configuration
-
-```bash
-# Copy environment template
+# Configure environment
 cp .env.example .env
+# Edit .env with your tokens
 
-# Edit .env with your credentials
+# Run bot
+python run_bot.py
 ```
 
-Required environment variables:
-```env
-# Data Provider (choose one)
-DATA_PROVIDER=alphavantage
+### Requirements
+- **Python 3.11+**
+- **Telegram Bot Token**
+- **OpenAI API Key** (optional for AI verification)
+- **Deriv API** (free, no key required)
 
-# Alpha Vantage (recommended - free tier available)
-ALPHA_VANTAGE_API_KEY=your_alpha_vantage_api_key_here
+## 📊 **Analysis Results**
 
-# Telegram Configuration
-TELEGRAM_BOT_TOKEN=your_telegram_bot_token_here
-TELEGRAM_ALLOWED_USER_ID=your_telegram_user_id_here
-
-# Trading Configuration
-DEFAULT_SYMBOL=EUR/USD
-DEFAULT_RISK_R=2.0
-```
-
-### 4. Get Telegram Bot Token
-
-1. Talk to [@BotFather](https://t.me/BotFather) on Telegram
-2. Create a new bot with `/newbot`
-3. Copy the bot token
-
-### 5. Get Your Telegram User ID
-
-1. Talk to [@userinfobot](https://t.me/userinfobot) on Telegram
-2. Copy your user ID
-
-### 6. Run Bot
-
+### Signal Format
 ```bash
-cd bot
-python main.py
-```
-
-## 📱 Bot Commands
-
-| Command | Description | Example |
-|---------|-------------|---------|
-| `/start` | Start using the bot | `/start` |
-| `/analyze [SYMBOL]` | Analyze a symbol | `/analyze EURUSD` |
-| `/set SYMBOL` | Set default symbol | `/set GBPUSD` |
-| `/status` | Show last analysis | `/status` |
-| `/watch SYMBOL MINUTES` | Schedule analysis | `/watch EURUSD 30` |
-| `/stopwatch` | Stop scheduled analysis | `/stopwatch` |
-| `/help` | Show help message | `/help` |
-
-## � Data Providers
-
-### Alpha Vantage (Recommended)
-- **Free tier available** with 500 requests/day
-- No credit card required
-- Easy signup process
-- Supports major FX pairs
-
-### FX Pairs
-- EURUSD (EUR/USD, EUR_USD)
-- GBPUSD (GBP/USD, GBP_USD)
-- AUDUSD (AUD/USD, AUD_USD)
-- USDJPY (USD/JPY, USD_JPY)
-- USDCAD (USD/CAD, USD_CAD)
-- NZDUSD (NZD/USD, NZD_USD)
-
-### Crypto Pairs (against USD)
-- BTCUSD (Bitcoin/USD)
-- ETHUSD (Ethereum/USD)
-- BNBUSD (Binance Coin/USD)
-- ADAUSD (Cardano/USD)
-- SOLUSD (Solana/USD)
-- XRPUSD (Ripple/USD)
-- DOGEUSD (Dogecoin/USD)
-
-### Metals (against USD)
-- XAUUSD (Gold/USD)
-- XAGUSD (Silver/USD)
-- XPTUSD (Platinum/USD)
-- XPDUSD (Palladium/USD)
-
-### Symbol Format
-All formats are automatically normalized:
-- `EURUSD`, `EUR/USD`, `EUR_USD` → `EUR/USD`
-- `BTCUSD` → `BTC/USD`
-- `XAUUSD` → `XAU/USD` (Gold)
-
-## 🧪 Running Tests
-
-```bash
-# Run all tests
-pytest
-
-# Run specific test file
-pytest tests/test_fvg.py
-
-# Run with coverage
-pytest --cov=bot tests/
-```
-
-## 📊 Example Output
-
-### ✅ BUY Signal
-```
 🟢 EURUSD Analysis
-🕐 2024-01-07 15:30 UTC
+🕐 2026-02-07 14:36 UTC
 📊 Timeframes: 4H | 30M | 5M
 
 🎯 SIGNAL: ✅ BUY (Confidence: 85%)
 
 📈 MARKET BIAS:
-Direction: LONG
-4H Trend: uptrend
-4H Event: BOS_UP
-Swing High: 1.09550
+Direction: BULLISH
+4H Trend: BOS
+4H Event: BOS
 
 🎯 POINT OF INTEREST:
-Type: OB
-Zone: 1.08920-1.08980
-Strength: 0.85
+Type: Order Block
+Zone: 1.0850-1.0870
 
 💧 LIQUIDITY:
 Sweep: Yes
-Pool Type: EQUAL_LOWS
-Sweep Price: 1.08910
 
 ⚡ CONFIRMATION:
-Pattern: BREAK_ENTRY
-Confidence: 0.80
-
-💼 TRADE PLAN:
-Entry Zone: 1.08920-1.08980
-Invalidation: 1.08920
-Target 1: 1.09550
-Target 2: 1.09980
+Pattern: Bullish Engulfing
 
 🤖 AI ANALYSIS:
-Direction: Strong bullish BOS confirmed
-POI: Quality order block in uptrend
-Liquidity: Clear sweep of equal lows
-Confirmation: Break and retest pattern
-
-⚠️ DISCLAIMER:
-This analysis is for educational purposes only.
-Not financial advice. Trade at your own risk.
+Strategy: Valid bullish setup
+Confidence: High
+Risk: Manage below 1.0820
 ```
 
-### ⚠️ NO-TRADE Signal
-```
-⚠️ EURUSD Analysis
-🕐 2024-01-07 15:30 UTC
-📊 Timeframes: 4H | 30M | 5M
+## 🔒 **Security & Privacy**
 
-🎯 SIGNAL: ⚠️ NO TRADE (Confidence: 40%)
+### Data Protection
+- **🔒 No Personal Data**: No user data collection
+- **🛡️ Secure API**: HTTPS encrypted connections
+- **🔐 Private Bot**: Only authorized access
+- **📊 Anonymous**: No tracking or analytics
 
-📈 MARKET BIAS:
-Direction: NEUTRAL
-4H Trend: sideways
-4H Event: NONE
+### API Security
+- **� Secure Tokens**: Encrypted storage
+- **� HTTPS Only**: Secure connections only
+- **� Rate Limiting**: Built-in protection
+- **🛡️ Input Validation**: Sanitized inputs
 
-🎯 POINT OF INTEREST:
-Type: None
+## ⚠️ **Disclaimer**
 
-💧 LIQUIDITY:
-Sweep: No
+**Educational Purpose Only**
+- This bot provides analysis for educational purposes
+- Not financial advice or investment recommendations
+- Trade at your own risk
+- Past performance does not guarantee future results
 
-⚡ CONFIRMATION:
-Pattern: None
+## � **Why Choose This Bot?**
 
-🤖 AI ANALYSIS:
-Direction: No clear bias established
-POI: No valid POI detected
-Liquidity: No liquidity sweep detected
-Confirmation: No confirmation pattern
-Missing: No clear 4H bias, No valid POI detected, No liquidity sweep detected, No confirmation pattern
-```
+### For Traders
+- **🆓 Completely Free**: No subscription fees
+- **⚡ Real-time Data**: Live market prices
+- **🤖 AI Enhanced**: Strategy validation
+- **📱 Easy to Use**: Simple interface
 
-## 🏗️ Project Structure
+### For Developers
+- **🚀 Open Source**: Free to modify and deploy
+- **📚 Well Documented**: Clear code structure
+- **🔧 Easy Setup**: One-click deployment
+- **🌍 Scalable**: Handles multiple users
 
-```
-bot/
-├── main.py                 # Main bot entry point
-├── config.py              # Configuration management
-├── storage.py             # SQLite database storage
-├── providers/             # Data providers
-│   ├── base.py           # Base provider interface
-│   ├── oanda.py          # OANDA REST API
-│   ├── tradingview.py    # TradingView (stub)
-│   └── binance.py        # Binance (stub)
-├── analysis/              # Analysis components
-│   ├── swings.py         # Swing point detection
-│   ├── structure.py      # BOS/MSS analysis
-│   ├── poi.py            # POI detection
-│   ├── liquidity.py      # Liquidity analysis
-│   ├── confirmation.py   # Pattern confirmation
-│   ├── signal_engine.py  # Main analysis engine
-│   └── ai_verifier.py    # AI rule verification
-├── telegram/              # Telegram interface
-│   ├── auth.py           # User authorization
-│   ├── handlers.py       # Command handlers
-│   └── formatters.py     # Message formatting
-└── tests/                 # Unit tests
-    ├── test_fvg.py
-    ├── test_swings.py
-    ├── test_bos_mss.py
-    └── test_patterns.py
-```
+### For Communities
+- **📊 Professional Analysis**: High-quality signals
+- **🔗 Easy Sharing**: Viral growth potential
+- **🌍 Global Access**: Available worldwide
+- **💫 Modern Interface**: Beautiful user experience
 
+## 📞 **Support**
 ## ⚙️ Configuration Options
 
 ```python

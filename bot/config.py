@@ -6,14 +6,11 @@ load_dotenv()
 
 class Config:
     # Data Provider Configuration
-    DATA_PROVIDER: str = os.getenv("DATA_PROVIDER", "deriv")  # "deriv", "fmp"
+    DATA_PROVIDER: str = os.getenv("DATA_PROVIDER", "deriv")  # Deriv API
     
-    # Deriv Configuration
+    # Deriv Configuration (Free API - no API key required)
     DERIV_API_KEY: str = os.getenv("DERIV_API_KEY", "")
     DERIV_APP_ID: str = os.getenv("DERIV_APP_ID", "1089")  # Demo app ID
-    
-    # Financial Modeling Prep Configuration
-    FMP_API_KEY: str = os.getenv("FMP_API_KEY", "demo")
     
     # Telegram Configuration
     TELEGRAM_BOT_TOKEN: str = os.getenv("TELEGRAM_BOT_TOKEN", "")

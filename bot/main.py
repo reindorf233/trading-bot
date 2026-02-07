@@ -10,7 +10,7 @@ from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from apscheduler.triggers.interval import IntervalTrigger
 
 from .config import Config
-from .providers import FMPProvider, DerivProvider
+from .providers import DerivProvider
 from .analysis import SignalEngine
 from .telegram.auth import AuthManager
 from .telegram.formatters import MessageFormatter
@@ -27,14 +27,8 @@ class TradingBot:
         self.application = None
         self.handlers = None
         
-        # Initialize data provider based on configuration
-        if self.config.DATA_PROVIDER == "deriv":
-            self.provider = DerivProvider()
-        elif self.config.DATA_PROVIDER == "fmp":
-            self.provider = FMPProvider()
-        else:
-            # Default to Deriv provider
-            self.provider = DerivProvider()
+        # Initialize data provider - using Deriv
+        self.provider = DerivProvider()
         
         self.signal_engine = SignalEngine(self.provider, self.config)
         self.storage = BotStorage()
