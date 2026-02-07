@@ -11,7 +11,7 @@ from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from apscheduler.triggers.interval import IntervalTrigger
 
 from ..config import Config
-from ..providers import OandaProvider, AlphaVantageProvider, FMPProvider
+from ..providers import FMPProvider
 from ..analysis import SignalEngine
 from .auth import AuthManager
 from .formatters import MessageFormatter
