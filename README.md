@@ -14,7 +14,7 @@ A sophisticated **public trading analysis bot** with **Financial Modeling Prep (
 
 ## 🌍 **Try the Bot Now!**
 
-**Bot Link**: [Click here to start using the bot](https://t.me/your_bot_username)
+**Bot Link**: [Click here to start using @rulerfxbot](https://t.me/rulerfxbot)
 
 **🔗 Share with friends**: Everyone can use this trading analysis bot for free!
 
