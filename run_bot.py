@@ -6,6 +6,7 @@ Runs the trading bot with proper module imports
 
 import sys
 import os
+import asyncio
 from pathlib import Path
 
 # Add the project root to Python path
@@ -15,4 +16,4 @@ sys.path.insert(0, str(project_root))
 # Import and run the bot
 if __name__ == "__main__":
     from bot.main import main
-    main()
+    asyncio.run(main())
