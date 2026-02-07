@@ -48,11 +48,12 @@ class BotHandlers:
             return
         
         welcome_msg = (
-            "🤖 Welcome to your Private Trading Assistant!\n\n"
-            "I analyze FX pairs using 3-timeframe framework:\n"
+            "🤖 Welcome to the Trading Analysis Bot!\n\n"
+            "I analyze FX pairs, cryptocurrencies, and metals using 3-timeframe framework:\n"
             "• 4H for market bias\n"
             "• 30M for POI detection\n"
-            "• 5M for entry confirmation\n\n"
+            "• 5M for entry confirmation\n"
+            "• AI-powered strategy confirmation\n\n"
             f"Default symbol: {self.config.DEFAULT_SYMBOL}\n\n"
             "Use /analyze to get started or /help for commands."
         )

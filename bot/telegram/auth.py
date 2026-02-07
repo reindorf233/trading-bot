@@ -16,14 +16,14 @@ class AuthManager:
         if not update.effective_user:
             return False
         
-        user_id = update.effective_user.id
-        return user_id == self.allowed_user_id
+        # Allow all users - public bot
+        return True
     
     async def check_access(self, update: Update, context: ContextTypes.DEFAULT_TYPE) -> bool:
         """Check access and send unauthorized message if needed."""
         if not await self.is_authorized(update):
             await update.message.reply_text(
-                "⚠️ Unauthorized access. This bot is private."
+                "⚠️ Access denied. Please contact the bot administrator."
             )
             return False
         

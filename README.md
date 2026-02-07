@@ -8,7 +8,7 @@ A sophisticated trading analysis bot with **Financial Modeling Prep (FMP)** inte
 - **⏰ 3-Timeframe Framework**: 4H (bias), 30M (POI), 5M (confirmation)
 - **🔍 Technical Analysis**: BOS/MSS, Order Blocks, Fair Value Gaps, Liquidity Sweeps
 - **🤖 AI Verification**: Optional LLM-based rule confirmation
-- **📱 Private Telegram Bot**: Single-user authorization for privacy
+- **📱 Public Telegram Bot**: Anyone can use the trading analysis
 - **⚡ Real-time Data**: Powered by Financial Modeling Prep (free tier)
 - **🚀 Production Ready**: Docker containerized for Railway deployment
 
