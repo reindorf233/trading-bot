@@ -67,7 +67,14 @@ class TradingBot:
             await self.application.start()
             await self.application.updater.start_polling()
             
-            self.application.run_polling()
+            # Keep the bot running
+            try:
+                # Run indefinitely
+                while True:
+                    await asyncio.sleep(1)
+            except (KeyboardInterrupt, SystemExit):
+                logger.info("Stopping bot...")
+                await self.stop()
             
         except Exception as e:
             logger.error(f"Failed to start bot: {e}")
@@ -97,7 +104,20 @@ class TradingBot:
             
             # Start bot
             logger.info("Starting trading bot...")
-            self.application.run_polling()
+            await self.application.initialize()
+            await self.application.start()
+            await self.application.updater.start_polling()
+            
+            # Keep the bot running
+            try:
+                # Run indefinitely
+                while True:
+                    await asyncio.sleep(1)
+            except (KeyboardInterrupt, SystemExit):
+                logger.info("Stopping bot...")
+                await self.application.updater.stop()
+                await self.application.stop()
+                await self.application.shutdown()
             
         except Exception as e:
             logger.error(f"Failed to run bot: {e}")
