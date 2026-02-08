@@ -12,7 +12,7 @@ from apscheduler.triggers.interval import IntervalTrigger
 
 from ..config import Config
 from ..providers import DerivProvider
-from ..analysis import SMCEngineV3
+from ..analysis import SMCEngineV4
 from .auth import AuthManager
 from .formatters import MessageFormatter
 from ..storage import BotStorage
@@ -51,7 +51,7 @@ class BotHandlers:
         # Initialize data provider - using Deriv
         self.provider = DerivProvider()
             
-        self.smc_engine = SMCEngineV3(self.provider, config)
+        self.smc_engine = SMCEngineV4(self.provider, config)
         self.storage = BotStorage()
         self.scheduler = AsyncIOScheduler()
         self.scheduler.start()

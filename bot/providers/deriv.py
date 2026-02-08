@@ -50,7 +50,7 @@ class DerivProvider(MarketDataProvider):
             return normalized
     
     async def _connect_websocket(self):
-        """Connect to Deriv WebSocket API."""
+        """Connect to Deriv WebSocket API with symbol validation."""
         try:
             self.ws = await websockets.connect(self.ws_url)
             
@@ -67,16 +67,47 @@ class DerivProvider(MarketDataProvider):
                     raise DataProviderError(f"Deriv auth error: {auth_data['error']['message']}")
                 
                 self.authorized = True
+                
+                # Get active symbols to validate available pairs
+                symbols_msg = {"active_symbols": "full"}
+                await self.ws.send(json.dumps(symbols_msg))
+                
+                # Wait for symbols response
+                symbols_response = await self.ws.recv()
+                symbols_data = json.loads(symbols_response)
+                
+                if symbols_data.get("error"):
+                    raise DataProviderError(f"Deriv symbols error: {symbols_data['error']['message']}")
+                
+                # Store available symbols for validation
+                self.available_symbols = {}
+                if "active_symbols" in symbols_data:
+                    for symbol_data in symbols_data["active_symbols"]:
+                        if isinstance(symbol_data, dict) and "symbol" in symbol_data:
+                            symbol_name = symbol_data["symbol"]
+                            display_name = symbol_data.get("display_name", symbol_name)
+                            self.available_symbols[symbol_name] = display_name
+                
+                logger.info(f"Connected to Deriv WebSocket. Available symbols: {list(self.available_symbols.keys())[:10]}")
             
             return True
         except Exception as e:
             raise DataProviderError(f"Deriv WebSocket connection failed: {str(e)}")
     
     async def _get_candles_websocket(self, symbol: str, timeframe: str, count: int = 500) -> List[Candle]:
-        """Get candle data using WebSocket API."""
+        """Get candle data using WebSocket API with symbol validation."""
         try:
             # Connect WebSocket
             await self._connect_websocket()
+            
+            # Normalize and validate symbol
+            normalized_symbol = self.normalize_symbol(symbol)
+            
+            # Validate symbol against available symbols
+            deriv_symbol = self._validate_and_map_symbol(normalized_symbol)
+            
+            if not deriv_symbol:
+                raise DataProviderError(f"Symbol {symbol} not available on Deriv. Available: {list(self.available_symbols.keys())[:10]}")
             
             # Map timeframe to Deriv granularity (in seconds)
             timeframe_map = {
@@ -90,28 +121,6 @@ class DerivProvider(MarketDataProvider):
             }
             
             deriv_timeframe = timeframe_map.get(timeframe, 300)
-            normalized_symbol = self.normalize_symbol(symbol)
-            
-            # Deriv symbol mapping
-            symbol_map = {
-                "EURUSD": "frxEURUSD",
-                "GBPUSD": "frxGBPUSD", 
-                "USDJPY": "frxUSDJPY",
-                "USDCHF": "frxUSDCHF",
-                "AUDUSD": "frxAUDUSD",
-                "NZDUSD": "frxNZDUSD",
-                "EURGBP": "frxEURGBP",
-                "EURJPY": "frxEURJPY",
-                "GBPJPY": "frxGBPJPY",
-                "USDCAD": "frxUSDCAD",
-                "EURAUD": "frxEURAUD",
-                "BTCUSD": "CRYBTCUSD",
-                "ETHUSD": "CRYETHUSD",
-                "XAUUSD": "frxXAUUSD",
-                "XAGUSD": "frxXAGUSD"
-            }
-            
-            deriv_symbol = symbol_map.get(normalized_symbol, f"frx{normalized_symbol}")
             
             # Request candle data
             request_msg = {
@@ -169,6 +178,57 @@ class DerivProvider(MarketDataProvider):
             
         except Exception as e:
             raise DataProviderError(f"Deriv WebSocket error: {str(e)}")
+    
+    def _validate_and_map_symbol(self, normalized_symbol: str) -> Optional[str]:
+        """Validate symbol against available Deriv symbols and return mapped symbol."""
+        # Direct symbol mapping for common pairs
+        symbol_map = {
+            "EURUSD": "frxEURUSD",
+            "GBPUSD": "frxGBPUSD", 
+            "USDJPY": "frxUSDJPY",
+            "USDCHF": "frxUSDCHF",
+            "AUDUSD": "frxAUDUSD",
+            "NZDUSD": "frxNZDUSD",
+            "EURGBP": "frxEURGBP",
+            "EURJPY": "frxEURJPY",
+            "GBPJPY": "frxGBPJPY",
+            "USDCAD": "frxUSDCAD",
+            "EURAUD": "frxEURAUD",
+            "EURCHF": "frxEURCHF",
+            "BTCUSD": "CRYBTCUSD",
+            "ETHUSD": "CRYETHUSD",
+            "LTCUSD": "CRYLTCUSD",
+            "BCHUSD": "CRYBCHUSD",
+            "XAUUSD": "frxXAUUSD",
+            "XAGUSD": "frxXAGUSD"
+        }
+        
+        # Check direct mapping first
+        if normalized_symbol in symbol_map:
+            return symbol_map[normalized_symbol]
+        
+        # Check available symbols for crypto pairs
+        if hasattr(self, 'available_symbols') and self.available_symbols:
+            # Look for symbol in available symbols
+            for available_symbol, display_name in self.available_symbols.items():
+                if normalized_symbol == available_symbol or normalized_symbol == display_name:
+                    # Try to find the correct mapped symbol
+                    for mapped_symbol, mapped_name in symbol_map.items():
+                        if available_symbol == mapped_name or display_name == mapped_name:
+                            return mapped_symbol
+            
+            # Special handling for crypto symbols
+            if normalized_symbol.startswith("BTC") and "BTC" in self.available_symbols:
+                return "CRYBTCUSD"
+            elif normalized_symbol.startswith("ETH") and "ETH" in self.available_symbols:
+                return "CRYETHUSD"
+            elif normalized_symbol.startswith("LTC") and "LTC" in self.available_symbols:
+                return "CRYLTCUSD"
+            elif normalized_symbol.startswith("BCH") and "BCH" in self.available_symbols:
+                return "CRYBCHUSD"
+        
+        # Default mapping for forex pairs
+        return f"frx{normalized_symbol}"
     
     async def _get_candles_fallback(self, symbol: str, timeframe: str, count: int = 500) -> List[Candle]:
         """Fallback method using free data sources."""

@@ -2,9 +2,9 @@
 Analysis package for trading signals
 """
 
-from .smc_engine_v3 import SMCEngineV3, SMCAnalysisV3
+from .smc_engine_v4 import SMCEngineV4, SMCAnalysisV4
 
 __all__ = [
-    'SMCEngineV3',
-    'SMCAnalysisV3'
+    'SMCEngineV4',
+    'SMCAnalysisV4'
 ]
