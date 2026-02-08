@@ -129,11 +129,15 @@ class DerivProvider(MarketDataProvider):
             data = json.loads(response)
             
             if data.get("error"):
-                raise DataProviderError(f"Deriv API error: {data['error']['message']}")
+                error_msg = data['error'].get('message', 'Unknown WebSocket error')
+                raise DataProviderError(f"Deriv WebSocket error: {error_msg}")
             
             # Parse candles from response
             candles = []
             history_data = data.get("history", {}).get("prices", [])
+            
+            if not history_data:
+                raise DataProviderError(f"No valid candle data found for {symbol} (WebSocket)")
             
             for item in history_data:
                 try:
@@ -231,17 +235,54 @@ class DerivProvider(MarketDataProvider):
         except Exception as ws_error:
             # Fallback to HTTP method
             try:
+                # Get symbol mapping for HTTP fallback
+                normalized_symbol = self.normalize_symbol(symbol)
+                
+                # Map timeframe to Deriv granularity (in seconds)
+                timeframe_map = {
+                    "1M": 60,
+                    "5M": 300, 
+                    "15M": 900,
+                    "30M": 1800,
+                    "1H": 3600,
+                    "4H": 14400,
+                    "1D": 86400
+                }
+                
+                deriv_timeframe = timeframe_map.get(timeframe, 300)
+                
+                # Deriv symbol mapping
+                symbol_map = {
+                    "EURUSD": "frxEURUSD",
+                    "GBPUSD": "frxGBPUSD", 
+                    "USDJPY": "frxUSDJPY",
+                    "USDCHF": "frxUSDCHF",
+                    "AUDUSD": "frxAUDUSD",
+                    "NZDUSD": "frxNZDUSD",
+                    "EURGBP": "frxEURGBP",
+                    "EURJPY": "frxEURJPY",
+                    "GBPJPY": "frxGBPJPY",
+                    "USDCAD": "frxUSDCAD",
+                    "EURAUD": "frxEURAUD",
+                    "BTCUSD": "CRYBTCUSD",
+                    "ETHUSD": "CRYETHUSD",
+                    "XAUUSD": "frxXAUUSD",
+                    "XAGUSD": "frxXAGUSD"
+                }
+                
+                deriv_symbol = symbol_map.get(normalized_symbol, f"frx{normalized_symbol}")
+                
                 async with httpx.AsyncClient() as client:
                     response = await client.get(
                         f"{self.base_url}/api/v2/ticks_history",
                         params={
-                            "ticks_history": f"frx{self.normalize_symbol(symbol)}",
+                            "ticks_history": deriv_symbol,
                             "adjust_start_time": 1,
                             "count": count,
                             "end": "latest",
                             "start": int((datetime.now() - timedelta(days=30)).timestamp()),
                             "style": "candles",
-                            "granularity": int(timeframe.replace("M", "").replace("H", "60").replace("D", "1440"))
+                            "granularity": deriv_timeframe
                         },
                         timeout=30.0
                     )
@@ -250,11 +291,14 @@ class DerivProvider(MarketDataProvider):
                         data = response.json()
                         
                         if data.get("error"):
-                            raise DataProviderError(f"Deriv API error: {data['error']['message']}")
+                            raise DataProviderError(f"Deriv HTTP error: {data['error']['message']}")
                         
                         # Parse response
                         candles = []
                         history_data = data.get("history", {}).get("prices", [])
+                        
+                        if not history_data:
+                            raise DataProviderError(f"No valid candle data found for {symbol} (HTTP)")
                         
                         for item in history_data:
                             try:
