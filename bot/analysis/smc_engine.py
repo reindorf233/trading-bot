@@ -51,6 +51,36 @@ class SMCAnalysis:
         self.ai_reasons: str = "Analysis pending"
         self.missing_conditions: List[str] = []
         self.risk_notes: str = "No risk assessment"
+    
+    def model_dump_json(self) -> str:
+        """Convert analysis to JSON string for storage."""
+        import json
+        
+        return json.dumps({
+            'symbol': self.symbol,
+            'timestamp': self.timestamp.isoformat() if self.timestamp else None,
+            'data_status': self.data_status,
+            'direction': self.direction,
+            'bias_4h': self.bias_4h,
+            'trend_4h': self.trend_4h,
+            'event_4h': self.event_4h,
+            'poi_type': self.poi_type,
+            'poi_zone': self.poi_zone,
+            'poi_timeframe': self.poi_timeframe,
+            'liquidity_sweep': self.liquidity_sweep,
+            'sweep_details': self.sweep_details,
+            'confirmation_pattern': self.confirmation_pattern,
+            'confirmation_timeframe': self.confirmation_timeframe,
+            'signal': self.signal,
+            'confidence': self.confidence,
+            'entry_zone': self.entry_zone,
+            'invalidation_level': self.invalidation_level,
+            'target1': self.target1,
+            'target2': self.target2,
+            'ai_reasons': self.ai_reasons,
+            'missing_conditions': self.missing_conditions,
+            'risk_notes': self.risk_notes
+        })
 
 
 class SMCEngine:
