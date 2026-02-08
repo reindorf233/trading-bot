@@ -6,6 +6,7 @@ Free real-time trading data for forex, crypto, and synthetic indices
 import httpx
 import asyncio
 import json
+import websockets
 from typing import List, Optional
 from datetime import datetime, timedelta
 
@@ -19,9 +20,13 @@ class DerivProvider(MarketDataProvider):
     def __init__(self):
         self.config = Config()
         self.api_key = getattr(self.config, 'DERIV_API_KEY', '')
-        self.app_id = getattr(self.config, 'DERIV_APP_ID', '1089')  # Demo app ID
+        self.app_id = getattr(self.config, 'DERIV_APP_ID', '125581')
+        self.ws_url = f"wss://ws.derivws.com/websockets/v3?app_id={self.app_id}"
         self.base_url = "https://api.deriv.com"
-        self.ws_url = "wss://ws.derivws.com/websockets/v3"
+        
+        # WebSocket connection state
+        self.ws = None
+        self.authorized = False
         
         # Deriv doesn't require API key for basic endpoints
         if not self.api_key:
@@ -44,108 +49,240 @@ class DerivProvider(MarketDataProvider):
         else:
             return normalized
     
+    async def _connect_websocket(self):
+        """Connect to Deriv WebSocket API."""
+        try:
+            self.ws = await websockets.connect(self.ws_url)
+            
+            # Authorize if API key provided
+            if self.use_api_key:
+                auth_msg = {"authorize": self.api_key}
+                await self.ws.send(json.dumps(auth_msg))
+                
+                # Wait for authorization response
+                response = await self.ws.recv()
+                auth_data = json.loads(response)
+                
+                if auth_data.get("error"):
+                    raise DataProviderError(f"Deriv auth error: {auth_data['error']['message']}")
+                
+                self.authorized = True
+            
+            return True
+        except Exception as e:
+            raise DataProviderError(f"Deriv WebSocket connection failed: {str(e)}")
+    
+    async def _get_candles_websocket(self, symbol: str, timeframe: str, count: int = 500) -> List[Candle]:
+        """Get candle data using WebSocket API."""
+        try:
+            # Connect WebSocket
+            await self._connect_websocket()
+            
+            # Map timeframe to Deriv granularity (in seconds)
+            timeframe_map = {
+                "1M": 60,
+                "5M": 300, 
+                "15M": 900,
+                "30M": 1800,
+                "1H": 3600,
+                "4H": 14400,
+                "1D": 86400
+            }
+            
+            deriv_timeframe = timeframe_map.get(timeframe, 300)
+            normalized_symbol = self.normalize_symbol(symbol)
+            
+            # Deriv symbol mapping
+            symbol_map = {
+                "EURUSD": "frxEURUSD",
+                "GBPUSD": "frxGBPUSD", 
+                "USDJPY": "frxUSDJPY",
+                "USDCHF": "frxUSDCHF",
+                "AUDUSD": "frxAUDUSD",
+                "NZDUSD": "frxNZDUSD",
+                "EURGBP": "frxEURGBP",
+                "EURJPY": "frxEURJPY",
+                "GBPJPY": "frxGBPJPY",
+                "USDCAD": "frxUSDCAD",
+                "EURAUD": "frxEURAUD",
+                "BTCUSD": "CRYBTCUSD",
+                "ETHUSD": "CRYETHUSD",
+                "XAUUSD": "frxXAUUSD",
+                "XAGUSD": "frxXAGUSD"
+            }
+            
+            deriv_symbol = symbol_map.get(normalized_symbol, f"frx{normalized_symbol}")
+            
+            # Request candle data
+            request_msg = {
+                "ticks_history": deriv_symbol,
+                "end": "latest",
+                "count": count,
+                "granularity": deriv_timeframe,
+                "style": "candles"
+            }
+            
+            await self.ws.send(json.dumps(request_msg))
+            
+            # Wait for response
+            response = await self.ws.recv()
+            data = json.loads(response)
+            
+            if data.get("error"):
+                raise DataProviderError(f"Deriv API error: {data['error']['message']}")
+            
+            # Parse candles from response
+            candles = []
+            history_data = data.get("history", {}).get("prices", [])
+            
+            for item in history_data:
+                try:
+                    timestamp = datetime.fromtimestamp(item["epoch"])
+                    
+                    candle = Candle(
+                        timestamp=timestamp,
+                        open=float(item["open"]),
+                        high=float(item["high"]),
+                        low=float(item["low"]),
+                        close=float(item["close"]),
+                        volume=int(item.get("volume", 0))
+                    )
+                    candles.append(candle)
+                    
+                except (ValueError, KeyError) as e:
+                    continue
+            
+            # Close WebSocket
+            await self.ws.close()
+            
+            if not candles:
+                raise DataProviderError(f"No valid candle data found for {symbol}")
+            
+            # Sort by timestamp (newest first)
+            candles.sort(key=lambda x: x.timestamp, reverse=True)
+            
+            return candles[:count]
+            
+        except Exception as e:
+            raise DataProviderError(f"Deriv WebSocket error: {str(e)}")
+    
+    async def _get_candles_fallback(self, symbol: str, timeframe: str, count: int = 500) -> List[Candle]:
+        """Fallback method using free data sources."""
+        try:
+            # Try yfinance as fallback (free, no API key needed)
+            import yfinance as yf
+            
+            normalized_symbol = self.normalize_symbol(symbol)
+            
+            # Map to yfinance format
+            yf_symbol = f"{normalized_symbol}=X"
+            
+            # Download data
+            ticker = yf.Ticker(yf_symbol)
+            
+            # Determine period based on timeframe
+            if timeframe in ["1M", "5M", "15M", "30M"]:
+                period = "5d"
+                interval = timeframe.replace("M", "m")
+            elif timeframe in ["1H", "4H"]:
+                period = "30d" 
+                interval = timeframe.replace("H", "h")
+            else:  # 1D
+                period = "1y"
+                interval = "1d"
+            
+            data = ticker.history(period=period, interval=interval)
+            
+            candles = []
+            for index, row in data.iterrows():
+                candle = Candle(
+                    timestamp=index.to_pydatetime(),
+                    open=float(row['Open']),
+                    high=float(row['High']),
+                    low=float(row['Low']),
+                    close=float(row['Close']),
+                    volume=int(row['Volume'])
+                )
+                candles.append(candle)
+            
+            if not candles:
+                raise DataProviderError(f"No fallback data found for {symbol}")
+            
+            # Sort by timestamp (newest first)
+            candles.sort(key=lambda x: x.timestamp, reverse=True)
+            
+            return candles[:count]
+            
+        except ImportError:
+            raise DataProviderError("Fallback requires yfinance library: pip install yfinance")
+        except Exception as e:
+            raise DataProviderError(f"Fallback data error: {str(e)}")
+    
     async def get_candles(
         self, 
         symbol: str, 
         timeframe: str, 
         count: int = 500
     ) -> List[Candle]:
-        """Get candle data from Deriv."""
-        # Map timeframe to Deriv parameters
-        timeframe_map = {
-            "1M": "1",
-            "5M": "5", 
-            "15M": "15",
-            "30M": "30",
-            "1H": "60",
-            "4H": "240",
-            "1D": "D"
-        }
-        
-        deriv_timeframe = timeframe_map.get(timeframe, "60")
-        normalized_symbol = self.normalize_symbol(symbol)
-        
-        # Deriv symbol mapping
-        symbol_map = {
-            "EURUSD": "frxEURUSD",
-            "GBPUSD": "frxGBPUSD", 
-            "USDJPY": "frxUSDJPY",
-            "USDCHF": "frxUSDCHF",
-            "AUDUSD": "frxAUDUSD",
-            "NZDUSD": "frxNZDUSD",
-            "EURGBP": "frxEURGBP",
-            "EURJPY": "frxEURJPY",
-            "GBPJPY": "frxGBPJPY",
-            "USDCAD": "frxUSDCAD",
-            "EURAUD": "frxEURAUD",
-            "BTCUSD": "CRYBTCUSD",
-            "ETHUSD": "CRYETHUSD",
-            "XAUUSD": "frxXAUUSD",
-            "XAGUSD": "frxXAGUSD"
-        }
-        
-        deriv_symbol = symbol_map.get(normalized_symbol, f"frx{normalized_symbol}")
-        
-        # Fetch data using correct Deriv API endpoint
-        async with httpx.AsyncClient() as client:
+        """Get candle data from Deriv with fallback."""
+        try:
+            # Try WebSocket first (primary method)
+            return await self._get_candles_websocket(symbol, timeframe, count)
+        except Exception as ws_error:
+            # Fallback to HTTP method
             try:
-                # Use the correct Deriv API endpoint for historical data
-                response = await client.get(
-                    f"{self.base_url}/api/v2/ticks_history",
-                    params={
-                        "ticks_history": deriv_symbol,
-                        "adjust_start_time": 1,
-                        "count": count,
-                        "end": "latest",
-                        "start": int((datetime.now() - timedelta(days=30)).timestamp()),
-                        "style": "candles",
-                        "granularity": int(deriv_timeframe)
-                    },
-                    timeout=30.0
-                )
-                
-                if response.status_code == 200:
-                    data = response.json()
+                async with httpx.AsyncClient() as client:
+                    response = await client.get(
+                        f"{self.base_url}/api/v2/ticks_history",
+                        params={
+                            "ticks_history": f"frx{self.normalize_symbol(symbol)}",
+                            "adjust_start_time": 1,
+                            "count": count,
+                            "end": "latest",
+                            "start": int((datetime.now() - timedelta(days=30)).timestamp()),
+                            "style": "candles",
+                            "granularity": int(timeframe.replace("M", "").replace("H", "60").replace("D", "1440"))
+                        },
+                        timeout=30.0
+                    )
                     
-                    if data.get("error"):
-                        raise DataProviderError(f"Deriv API error: {data['error']['message']}")
+                    if response.status_code == 200:
+                        data = response.json()
+                        
+                        if data.get("error"):
+                            raise DataProviderError(f"Deriv API error: {data['error']['message']}")
+                        
+                        # Parse response
+                        candles = []
+                        history_data = data.get("history", {}).get("prices", [])
+                        
+                        for item in history_data:
+                            try:
+                                timestamp = datetime.fromtimestamp(item["epoch"])
+                                
+                                candle = Candle(
+                                    timestamp=timestamp,
+                                    open=float(item["open"]),
+                                    high=float(item["high"]),
+                                    low=float(item["low"]),
+                                    close=float(item["close"]),
+                                    volume=int(item.get("volume", 0))
+                                )
+                                candles.append(candle)
+                                
+                            except (ValueError, KeyError):
+                                continue
+                        
+                        if candles:
+                            candles.sort(key=lambda x: x.timestamp, reverse=True)
+                            return candles[:count]
                     
-                    # Parse response
-                    candles = []
-                    history_data = data.get("history", {}).get("prices", [])
-                    
-                    for item in history_data:
-                        try:
-                            timestamp = datetime.fromtimestamp(item["epoch"])
-                            
-                            candle = Candle(
-                                timestamp=timestamp,
-                                open=float(item["open"]),
-                                high=float(item["high"]),
-                                low=float(item["low"]),
-                                close=float(item["close"]),
-                                volume=int(item.get("volume", 0))
-                            )
-                            candles.append(candle)
-                            
-                        except (ValueError, KeyError) as e:
-                            continue
-                    
-                    if not candles:
-                        raise DataProviderError(f"No valid candle data found for {symbol}")
-                    
-                    # Sort by timestamp (newest first)
-                    candles.sort(key=lambda x: x.timestamp, reverse=True)
-                    
-                    return candles[:count]
-                    
-                else:
-                    raise DataProviderError(f"Deriv API error: {response.status_code}")
-                    
-            except httpx.HTTPError as e:
-                raise DataProviderError(f"HTTP error fetching data: {str(e)}")
-            except Exception as e:
-                raise DataProviderError(f"Error fetching data from Deriv: {str(e)}")
+            except Exception as http_error:
+                # Final fallback to free data
+                return await self._get_candles_fallback(symbol, timeframe, count)
+            
+            # If all methods fail, raise the original WebSocket error
+            raise DataProviderError(f"Deriv API connection issue (likely method/URL mismatch) – falling back to alternative analysis: {str(ws_error)}")
     
     async def get_symbols(self) -> List[str]:
         """Get available symbols from Deriv."""
@@ -164,17 +301,25 @@ class DerivProvider(MarketDataProvider):
     async def test_connection(self) -> bool:
         """Test connection to Deriv API."""
         try:
-            async with httpx.AsyncClient() as client:
-                response = await client.get(
-                    f"{self.base_url}/api/v2/ticks_history",
-                    params={
-                        "ticks_history": "frxEURUSD",
-                        "count": 1,
-                        "style": "candles",
-                        "granularity": 60
-                    },
-                    timeout=10.0
-                )
-                return response.status_code == 200
+            # Try WebSocket connection first
+            await self._connect_websocket()
+            if self.ws:
+                await self.ws.close()
+            return True
         except:
-            return False
+            # Fallback to HTTP test
+            try:
+                async with httpx.AsyncClient() as client:
+                    response = await client.get(
+                        f"{self.base_url}/api/v2/ticks_history",
+                        params={
+                            "ticks_history": "frxEURUSD",
+                            "count": 1,
+                            "style": "candles",
+                            "granularity": 60
+                        },
+                        timeout=10.0
+                    )
+                    return response.status_code == 200
+            except:
+                return False

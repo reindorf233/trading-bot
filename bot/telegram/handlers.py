@@ -12,7 +12,7 @@ from apscheduler.triggers.interval import IntervalTrigger
 
 from ..config import Config
 from ..providers import DerivProvider
-from ..analysis import SignalEngine
+from ..analysis import SMCEngine
 from .auth import AuthManager
 from .formatters import MessageFormatter
 from ..storage import BotStorage
@@ -51,7 +51,7 @@ class BotHandlers:
         # Initialize data provider - using Deriv
         self.provider = DerivProvider()
             
-        self.signal_engine = SignalEngine(self.provider, config)
+        self.smc_engine = SMCEngine(self.provider, config)
         self.storage = BotStorage()
         self.scheduler = AsyncIOScheduler()
         self.scheduler.start()
@@ -123,26 +123,31 @@ class BotHandlers:
         else:
             symbol = self.config.DEFAULT_SYMBOL
         
-        # Send processing message
-        processing_msg = await update.message.reply_text(
-            f"🔄 Analyzing {symbol}...\nThis may take a few seconds."
-        )
-        
+        await self.analyze_symbol(update, context, symbol)
+    
+    async def analyze_symbol(self, update: Update, context: ContextTypes.DEFAULT_TYPE, symbol: str):
+        """Analyze a specific symbol using SMC strategy."""
         try:
-            # Perform analysis
-            result = await self.signal_engine.analyze_symbol(symbol)
+            # Show typing indicator
+            await context.bot.send_chat_action(
+                chat_id=update.effective_chat.id, 
+                action="typing"
+            )
             
-            # Store result
-            await self.storage.save_analysis(result)
+            # Perform SMC analysis
+            result = await self.smc_engine.analyze_symbol(symbol)
             
             # Format and send result
             message = MessageFormatter.format_signal_message(result)
-            await processing_msg.edit_text(message)
+            await update.message.reply_text(message, parse_mode="Markdown")
+            
+            # Store last result
+            await self.storage.set_last_analysis(update.effective_user.id, result)
             
         except Exception as e:
-            logger.error(f"Analysis failed: {e}")
-            error_msg = MessageFormatter.format_error_message(str(e))
-            await processing_msg.edit_text(error_msg)
+            logger.error(f"Error analyzing {symbol}: {e}")
+            error_msg = MessageFormatter.format_error_message(f"Analysis failed: {str(e)}")
+            await update.message.reply_text(error_msg, parse_mode="Markdown")
     
     async def set_command(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
         """Handle /set command to set default symbol."""
@@ -231,7 +236,7 @@ class BotHandlers:
         
         async def scheduled_analysis():
             try:
-                result = await self.signal_engine.analyze_symbol(symbol)
+                result = await self.smc_engine.analyze_symbol(symbol)
                 await self.storage.save_analysis(result)
                 
                 # Send result to user
