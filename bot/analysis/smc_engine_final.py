@@ -59,7 +59,6 @@ class SMCAnalysisFinal:
             'timestamp': self.timestamp.isoformat() if self.timestamp else None,
             'data_status': self.data_status,
             'direction': self.direction,
-            'bias_4h': self.bias_4h,
             'trend_4h': self.trend_4h,
             'event_4h': self.event_4h,
             'poi_type': self.poi_type,
@@ -410,6 +409,7 @@ class SMCEngineFinal:
         current_price = candles[0].close
         poi_high = float(poi['zone'].split('-')[1])
         poi_low = float(poi['zone'].split('-')[0])
+        poi_type = poi.get('type', '')
         
         recent_candles = candles[:10]
         recent_highs = sorted([c.high for c in recent_candles], reverse=True)[:3]
@@ -418,12 +418,12 @@ class SMCEngineFinal:
         sweep_details = []
         
         # Check for sweep above recent highs (for bearish POI)
-        if 'Bearish' in poi['type']:
+        if 'Bearish' in poi_type:
             for high in recent_highs:
                 if current_price > high and abs(current_price - high) < 0.0005:
                     sweep_details.append(f"Wicked above recent high at {high:.5f}")
                     break
-        elif 'Bullish' in poi['type']:
+        elif 'Bullish' in poi_type:
             for low in recent_lows:
                 if current_price < low and abs(low - current_price) < 0.0005:
                     sweep_details.append(f"Wicked below recent low at {low:.5f}")
@@ -433,9 +433,9 @@ class SMCEngineFinal:
         equal_highs = [h for h in recent_highs if abs(h - recent_highs[0]) < 0.0001]
         equal_lows = [l for l in recent_lows if abs(l - recent_lows[0]) < 0.0001]
         
-        if equal_highs and 'Bearish' in poi['type']:
+        if equal_highs and 'Bearish' in poi_type:
             sweep_details.append("Stop hunt at equal highs detected")
-        elif equal_lows and 'Bullish' in poi['type']:
+        elif equal_lows and 'Bullish' in poi_type:
             sweep_details.append("Stop hunt at equal lows detected")
         
         if sweep_details:
@@ -595,6 +595,13 @@ class SMCEngineFinal:
                 confidence += 10
         
         # Check for conflicts
+        # POI vs Direction conflicts
+        if analysis.direction == "Bullish" and "Bearish" in analysis.poi_type:
+            confidence -= 30  # Heavy conflict penalty
+        elif analysis.direction == "Bearish" and "Bullish" in analysis.poi_type:
+            confidence -= 30  # Heavy conflict penalty
+        
+        # Pattern vs Direction conflicts
         if analysis.direction == "Bullish" and "Bearish" in analysis.confirmation_pattern:
             confidence -= 20  # Conflict penalty
         elif analysis.direction == "Bearish" and "Bullish" in analysis.confirmation_pattern:

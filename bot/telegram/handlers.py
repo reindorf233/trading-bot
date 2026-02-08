@@ -125,20 +125,26 @@ class BotHandlers:
         
         await self.analyze_symbol(update, context, symbol)
     
-    async def analyze_symbol(self, update: Update, context: ContextTypes.DEFAULT_TYPE, symbol: str):
+    async def analyze_symbol(self, update: Update, context: ContextTypes.DEFAULT_TYPE, symbol: str = None):
         """Analyze a trading symbol using exact 4-step SMC."""
         if not await self.auth.check_access(update, context):
             return
         
-        # Extract symbol and check for JSON request
+        # Extract message and check for JSON request or manual input
         message_text = update.message.text.strip()
         is_json_request = "json" in message_text.lower()
         
-        # Extract symbol from command
-        if len(message_text.split()) > 1:
-            symbol = message_text.split()[1].upper()
+        # Check if this is manual input (contains SMC terms)
+        smc_terms = ["bullish", "bearish", "mss", "chos", "bos", "poi", "sweep", "morning star", "evening star", "breaker", "ob", "fvg", "rb"]
+        is_manual_input = any(term in message_text.lower() for term in smc_terms)
+        
+        # Extract symbol from command or use default
+        if symbol:
+            analysis_symbol = symbol.upper()
+        elif len(message_text.split()) > 1:
+            analysis_symbol = message_text.split()[1].upper()
         else:
-            symbol = self.config.DEFAULT_SYMBOL
+            analysis_symbol = self.config.DEFAULT_SYMBOL
         
         try:
             # Show typing indicator
@@ -148,7 +154,10 @@ class BotHandlers:
             )
             
             # Perform SMC analysis
-            analysis = await self.smc_engine.analyze_symbol(symbol)
+            if is_manual_input:
+                analysis = await self.smc_engine.analyze_symbol(analysis_symbol, manual_input=message_text)
+            else:
+                analysis = await self.smc_engine.analyze_symbol(analysis_symbol)
             
             # Save analysis
             await self.storage.save_analysis(analysis)

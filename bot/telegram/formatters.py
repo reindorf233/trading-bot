@@ -41,6 +41,8 @@ class MessageFormatter:
             f"{escape_markdown(analysis.ai_reasons)}\n"
             f"Risk: {escape_markdown(analysis.risk_notes)}\n\n"
             
+            f"**Data Status:** {escape_markdown(analysis.data_status)}\n\n"
+            
             f"**DISCLAIMER:**\n"
             "Educational purposes only. Not financial advice. Trade at your own risk."
         )
