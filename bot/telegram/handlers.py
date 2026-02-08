@@ -451,7 +451,7 @@ class BotHandlers:
         
         try:
             # Perform analysis
-            result = await self.signal_engine.analyze_symbol(symbol)
+            result = await self.smc_engine.analyze_symbol(symbol)
             
             # Store result
             user_id = query.from_user.id
