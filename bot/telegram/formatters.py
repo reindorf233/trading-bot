@@ -1,13 +1,13 @@
 from datetime import datetime
 from typing import Optional
 
-from ..analysis.smc_engine_v4 import SMCAnalysisV4
+from ..analysis.smc_engine_v5 import SMCAnalysisV5
 
 class MessageFormatter:
     """Format analysis results for Telegram messages."""
     
     @staticmethod
-    def format_signal_message(analysis: SMCAnalysisV4) -> str:
+    def format_signal_message(analysis: SMCAnalysisV5) -> str:
         """Format SMC analysis result into Telegram message."""
         
         # Helper function to escape special characters for Telegram
@@ -53,7 +53,7 @@ class MessageFormatter:
         return message
     
     @staticmethod
-    async def format_status_message(last_result: Optional[SMCAnalysisV4]) -> str:
+    async def format_status_message(last_result: Optional[SMCAnalysisV5]) -> str:
         """Format status message with last analysis."""
         if not last_result:
             return "� No analysis performed yet. Use /analyze to start."

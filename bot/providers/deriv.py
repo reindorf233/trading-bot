@@ -34,6 +34,11 @@ class DerivProvider(MarketDataProvider):
         else:
             self.use_api_key = True
     
+    def _is_crypto_symbol(self, symbol: str) -> bool:
+        """Detect if symbol is a cryptocurrency."""
+        crypto_prefixes = ['BTC', 'ETH', 'LTC', 'BCH', 'XRP', 'ADA', 'DOT', 'LINK', 'UNI']
+        return any(symbol.startswith(prefix) for prefix in crypto_prefixes)
+    
     def normalize_symbol(self, symbol: str) -> str:
         """Normalize symbol to Deriv format."""
         # Remove slashes, dashes, convert to uppercase
@@ -107,7 +112,12 @@ class DerivProvider(MarketDataProvider):
             deriv_symbol = self._validate_and_map_symbol(normalized_symbol)
             
             if not deriv_symbol:
-                raise DataProviderError(f"Symbol {symbol} not available on Deriv. Available: {list(self.available_symbols.keys())[:10]}")
+                # Provide specific crypto error message
+                if self._is_crypto_symbol(normalized_symbol):
+                    crypto_name = normalized_symbol.replace("USD", "")
+                    raise DataProviderError(f"Deriv crypto uses '{crypto_name}' not '{normalized_symbol}'. Fallback activated.")
+                else:
+                    raise DataProviderError(f"Symbol {symbol} not available on Deriv. Available: {list(self.available_symbols.keys())[:10]}")
             
             # Map timeframe to Deriv granularity (in seconds)
             timeframe_map = {
@@ -180,9 +190,10 @@ class DerivProvider(MarketDataProvider):
             raise DataProviderError(f"Deriv WebSocket error: {str(e)}")
     
     def _validate_and_map_symbol(self, normalized_symbol: str) -> Optional[str]:
-        """Validate symbol against available Deriv symbols and return mapped symbol."""
-        # Direct symbol mapping for common pairs
+        """Validate symbol against available Deriv symbols and return mapped symbol with enhanced crypto handling."""
+        # Enhanced crypto symbol mapping for Deriv
         symbol_map = {
+            # Forex pairs
             "EURUSD": "frxEURUSD",
             "GBPUSD": "frxGBPUSD", 
             "USDJPY": "frxUSDJPY",
@@ -195,10 +206,19 @@ class DerivProvider(MarketDataProvider):
             "USDCAD": "frxUSDCAD",
             "EURAUD": "frxEURAUD",
             "EURCHF": "frxEURCHF",
-            "BTCUSD": "CRYBTCUSD",
-            "ETHUSD": "CRYETHUSD",
-            "LTCUSD": "CRYLTCUSD",
-            "BCHUSD": "CRYBCHUSD",
+            
+            # Crypto pairs - use short symbols as per Deriv format
+            "BTCUSD": "CRYBTC",
+            "ETHUSD": "CRYETH",
+            "LTCUSD": "CRYLTC",
+            "BCHUSD": "CRYBCH",
+            "XRPUSD": "CRYXRP",
+            "ADAUSD": "CRYADA",
+            "DOTUSD": "CRYDOT",
+            "LINKUSD": "CRYLINK",
+            "UNIUSD": "CRYUNI",
+            
+            # Metals
             "XAUUSD": "frxXAUUSD",
             "XAGUSD": "frxXAGUSD"
         }
@@ -207,25 +227,42 @@ class DerivProvider(MarketDataProvider):
         if normalized_symbol in symbol_map:
             return symbol_map[normalized_symbol]
         
-        # Check available symbols for crypto pairs
+        # Enhanced crypto symbol detection
         if hasattr(self, 'available_symbols') and self.available_symbols:
-            # Look for symbol in available symbols
+            # Look for crypto symbols in available symbols
+            crypto_symbols = [s for s in self.available_symbols.keys() if s.startswith('CRY')]
+            
+            # Special handling for crypto - use short symbols
+            if normalized_symbol.startswith("BTC"):
+                if "CRYBTC" in self.available_symbols:
+                    return "CRYBTC"
+                elif "BTC" in self.available_symbols:
+                    return "BTC"
+            elif normalized_symbol.startswith("ETH"):
+                if "CRYETH" in self.available_symbols:
+                    return "CRYETH"
+                elif "ETH" in self.available_symbols:
+                    return "ETH"
+            elif normalized_symbol.startswith("LTC"):
+                if "CRYLTC" in self.available_symbols:
+                    return "CRYLTC"
+                elif "LTC" in self.available_symbols:
+                    return "LTC"
+            elif normalized_symbol.startswith("BCH"):
+                if "CRYBCH" in self.available_symbols:
+                    return "CRYBCH"
+                elif "BCH" in self.available_symbols:
+                    return "BCH"
+            elif normalized_symbol.startswith("XRP"):
+                if "CRYXRP" in self.available_symbols:
+                    return "CRYXRP"
+                elif "XRP" in self.available_symbols:
+                    return "XRP"
+            
+            # Look for exact match in available symbols
             for available_symbol, display_name in self.available_symbols.items():
                 if normalized_symbol == available_symbol or normalized_symbol == display_name:
-                    # Try to find the correct mapped symbol
-                    for mapped_symbol, mapped_name in symbol_map.items():
-                        if available_symbol == mapped_name or display_name == mapped_name:
-                            return mapped_symbol
-            
-            # Special handling for crypto symbols
-            if normalized_symbol.startswith("BTC") and "BTC" in self.available_symbols:
-                return "CRYBTCUSD"
-            elif normalized_symbol.startswith("ETH") and "ETH" in self.available_symbols:
-                return "CRYETHUSD"
-            elif normalized_symbol.startswith("LTC") and "LTC" in self.available_symbols:
-                return "CRYLTCUSD"
-            elif normalized_symbol.startswith("BCH") and "BCH" in self.available_symbols:
-                return "CRYBCHUSD"
+                    return available_symbol
         
         # Default mapping for forex pairs
         return f"frx{normalized_symbol}"
