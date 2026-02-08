@@ -595,36 +595,36 @@ class SMCEngineFinal:
                 confidence += 10
         
         # Check for conflicts - STRICT ALIGNMENT RULES
-        # POI vs Direction conflicts - HEAVY PENALTY
+        # POI vs Direction conflicts - FORCED NO TRADE
         if analysis.direction == "Bullish" and "Bearish" in analysis.poi_type:
-            confidence -= 50  # Heavy conflict - forces NO TRADE
+            confidence = 0  # Force NO TRADE
             analysis.signal = "NO TRADE"
-            analysis.ai_reasons = "Bearish POI conflicts with bullish direction - heavy penalty applied"
+            analysis.ai_reasons = "Conflicting POI/pattern – waiting for alignment"
         elif analysis.direction == "Bearish" and "Bullish" in analysis.poi_type:
-            confidence -= 50  # Heavy conflict - forces NO TRADE
+            confidence = 0  # Force NO TRADE
             analysis.signal = "NO TRADE"
-            analysis.ai_reasons = "Bullish POI conflicts with bearish direction - heavy penalty applied"
+            analysis.ai_reasons = "Conflicting POI/pattern – waiting for alignment"
         
-        # Pattern vs Direction conflicts - HEAVY PENALTY
+        # Pattern vs Direction conflicts - FORCED NO TRADE
         if analysis.direction == "Bullish" and "Bearish" in analysis.confirmation_pattern:
-            confidence -= 40  # Heavy conflict - forces NO TRADE
+            confidence = 0  # Force NO TRADE
             analysis.signal = "NO TRADE"
-            analysis.ai_reasons = "Bearish pattern conflicts with bullish direction - heavy penalty applied"
+            analysis.ai_reasons = "Conflicting POI/pattern – waiting for alignment"
         elif analysis.direction == "Bearish" and "Bullish" in analysis.confirmation_pattern:
-            confidence -= 40  # Heavy conflict - forces NO TRADE
+            confidence = 0  # Force NO TRADE
             analysis.signal = "NO TRADE"
-            analysis.ai_reasons = "Bullish pattern conflicts with bearish direction - heavy penalty applied"
+            analysis.ai_reasons = "Conflicting POI/pattern – waiting for alignment"
         
-        # BOOST for aligned POI and patterns
+        # BOOST for perfectly aligned POI and patterns
         if analysis.direction == "Bullish" and "Bullish" in analysis.poi_type:
-            confidence += 15  # Boost for aligned POI
+            confidence += 20  # Strong boost for aligned POI
         elif analysis.direction == "Bearish" and "Bearish" in analysis.poi_type:
-            confidence += 15  # Boost for aligned POI
+            confidence += 20  # Strong boost for aligned POI
         
         if analysis.direction == "Bullish" and "Bullish" in analysis.confirmation_pattern:
-            confidence += 10  # Boost for aligned pattern
+            confidence += 15  # Boost for aligned pattern
         elif analysis.direction == "Bearish" and "Bearish" in analysis.confirmation_pattern:
-            confidence += 10  # Boost for aligned pattern
+            confidence += 15  # Boost for aligned pattern
         
         return min(max(confidence, 0), 100)
     
@@ -636,8 +636,17 @@ class SMCEngineFinal:
         if analysis.signal == "NO TRADE":
             return "NO TRADE", "N/A", "N/A", analysis.ai_reasons
         
+        # BUY/SELL only if ≥70% AND perfect alignment
         if confidence < 70:
             return "NO TRADE", "N/A", "N/A", f"Confidence {confidence}% - waiting for better confluence"
+        
+        # Check for perfect alignment before allowing BUY/SELL
+        if analysis.direction == "Bullish":
+            if "Bearish" in analysis.poi_type or "Bearish" in analysis.confirmation_pattern:
+                return "NO TRADE", "N/A", "N/A", "Conflicting POI/pattern – waiting for alignment"
+        elif analysis.direction == "Bearish":
+            if "Bullish" in analysis.poi_type or "Bullish" in analysis.confirmation_pattern:
+                return "NO TRADE", "N/A", "N/A", "Conflicting POI/pattern – waiting for alignment"
         
         if analysis.signal == "BUY":
             entry = analysis.poi_zone
