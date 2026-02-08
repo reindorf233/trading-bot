@@ -5,7 +5,7 @@ from typing import Optional, Dict, Any
 from datetime import datetime
 from pathlib import Path
 
-from .analysis.signal_engine import SignalResult
+from .analysis.smc_engine import SMCAnalysis
 
 logger = logging.getLogger(__name__)
 
@@ -99,7 +99,7 @@ class BotStorage:
             logger.error(f"Failed to get user symbol: {e}")
             return "EUR_USD"
     
-    async def save_analysis(self, result: SignalResult):
+    async def save_analysis(self, result: SMCAnalysis):
         """Save analysis result."""
         try:
             with sqlite3.connect(self.db_path) as conn:
@@ -116,20 +116,20 @@ class BotStorage:
                     1,  # Single user bot - hardcoded user_id
                     result.symbol,
                     result.timestamp,
-                    result.decision,
+                    result.signal,
                     result.confidence,
-                    result.bias,
+                    result.direction,
                     result_data
                 ))
                 
                 conn.commit()
-                logger.info(f"Saved analysis for {result.symbol}: {result.decision}")
+                logger.info(f"Saved analysis for {result.symbol}: {result.signal}")
                 
         except Exception as e:
             logger.error(f"Failed to save analysis: {e}")
             raise
     
-    async def get_last_analysis(self, user_id: int = 1) -> Optional[SignalResult]:
+    async def get_last_analysis(self, user_id: int = 1) -> Optional[SMCAnalysis]:
         """Get last analysis result."""
         try:
             with sqlite3.connect(self.db_path) as conn:
@@ -146,7 +146,7 @@ class BotStorage:
                 
                 if result:
                     result_data = json.loads(result[0])
-                    return SignalResult(**result_data)
+                    return SMCAnalysis(**result_data)
                 
                 return None
                 
@@ -158,7 +158,7 @@ class BotStorage:
         self, 
         user_id: int = 1, 
         limit: int = 10
-    ) -> list[SignalResult]:
+    ) -> list[SMCAnalysis]:
         """Get analysis history."""
         try:
             with sqlite3.connect(self.db_path) as conn:
@@ -174,7 +174,7 @@ class BotStorage:
                 results = []
                 for result in cursor.fetchall():
                     result_data = json.loads(result[0])
-                    results.append(SignalResult(**result_data))
+                    results.append(SMCAnalysis(**result_data))
                 
                 return results
                 
