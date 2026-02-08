@@ -594,24 +594,47 @@ class SMCEngineFinal:
             if analysis.confirmation_pattern in ["BE", "RB", "Morning Star", "Evening Star", "MSS + BB"]:
                 confidence += 10
         
-        # Check for conflicts
-        # POI vs Direction conflicts
+        # Check for conflicts - STRICT ALIGNMENT RULES
+        # POI vs Direction conflicts - HEAVY PENALTY
         if analysis.direction == "Bullish" and "Bearish" in analysis.poi_type:
-            confidence -= 30  # Heavy conflict penalty
+            confidence -= 50  # Heavy conflict - forces NO TRADE
+            analysis.signal = "NO TRADE"
+            analysis.ai_reasons = "Bearish POI conflicts with bullish direction - heavy penalty applied"
         elif analysis.direction == "Bearish" and "Bullish" in analysis.poi_type:
-            confidence -= 30  # Heavy conflict penalty
+            confidence -= 50  # Heavy conflict - forces NO TRADE
+            analysis.signal = "NO TRADE"
+            analysis.ai_reasons = "Bullish POI conflicts with bearish direction - heavy penalty applied"
         
-        # Pattern vs Direction conflicts
+        # Pattern vs Direction conflicts - HEAVY PENALTY
         if analysis.direction == "Bullish" and "Bearish" in analysis.confirmation_pattern:
-            confidence -= 20  # Conflict penalty
+            confidence -= 40  # Heavy conflict - forces NO TRADE
+            analysis.signal = "NO TRADE"
+            analysis.ai_reasons = "Bearish pattern conflicts with bullish direction - heavy penalty applied"
         elif analysis.direction == "Bearish" and "Bullish" in analysis.confirmation_pattern:
-            confidence -= 20  # Conflict penalty
+            confidence -= 40  # Heavy conflict - forces NO TRADE
+            analysis.signal = "NO TRADE"
+            analysis.ai_reasons = "Bullish pattern conflicts with bearish direction - heavy penalty applied"
+        
+        # BOOST for aligned POI and patterns
+        if analysis.direction == "Bullish" and "Bullish" in analysis.poi_type:
+            confidence += 15  # Boost for aligned POI
+        elif analysis.direction == "Bearish" and "Bearish" in analysis.poi_type:
+            confidence += 15  # Boost for aligned POI
+        
+        if analysis.direction == "Bullish" and "Bullish" in analysis.confirmation_pattern:
+            confidence += 10  # Boost for aligned pattern
+        elif analysis.direction == "Bearish" and "Bearish" in analysis.confirmation_pattern:
+            confidence += 10  # Boost for aligned pattern
         
         return min(max(confidence, 0), 100)
     
     def _generate_signal(self, analysis: SMCAnalysisFinal) -> Tuple[str, str, str, str]:
         """Generate trading signal based on analysis."""
         confidence = self._calculate_confidence(analysis)
+        
+        # If conflicts already forced NO TRADE, respect it
+        if analysis.signal == "NO TRADE":
+            return "NO TRADE", "N/A", "N/A", analysis.ai_reasons
         
         if confidence < 70:
             return "NO TRADE", "N/A", "N/A", f"Confidence {confidence}% - waiting for better confluence"
@@ -652,11 +675,11 @@ class SMCEngineFinal:
                 if candles_4h and candles_30m and candles_5m:
                     analysis.data_status = "Deriv success"
                 else:
-                    analysis.data_status = "Deriv data unavailable – using emulation"
+                    analysis.data_status = "Deriv unavailable (check symbol like 'ETH') – emulated"
                     return await self._fallback_smc_emulation(analysis, symbol)
                     
             except Exception as e:
-                analysis.data_status = "Deriv data unavailable – using emulation"
+                analysis.data_status = "Deriv unavailable (check symbol like 'ETH') – emulated"
                 return await self._fallback_smc_emulation(analysis, symbol)
             
             # Step 1: Direction (4H)
@@ -721,7 +744,7 @@ class SMCEngineFinal:
     async def _fallback_smc_emulation(self, analysis: SMCAnalysisFinal, symbol: str, error: str = None) -> SMCAnalysisFinal:
         """Fallback SMC emulation when live data fails."""
         try:
-            analysis.data_status = "Emulated analysis – please verify live on Deriv or TradingView"
+            analysis.data_status = "Emulated – verify live on Deriv/TradingView/MT5"
             
             import random
             
