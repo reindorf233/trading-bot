@@ -12,7 +12,7 @@ from apscheduler.triggers.interval import IntervalTrigger
 
 from ..config import Config
 from ..providers import DerivProvider
-from ..analysis import SMCEngineV5
+from ..analysis import SMCEngineFinal
 from .auth import AuthManager
 from .formatters import MessageFormatter
 from ..storage import BotStorage
@@ -51,7 +51,7 @@ class BotHandlers:
         # Initialize data provider - using Deriv
         self.provider = DerivProvider()
             
-        self.smc_engine = SMCEngineV5(self.provider, config)
+        self.smc_engine = SMCEngineFinal(self.provider, config)
         self.storage = BotStorage()
         self.scheduler = AsyncIOScheduler()
         self.scheduler.start()
@@ -126,7 +126,20 @@ class BotHandlers:
         await self.analyze_symbol(update, context, symbol)
     
     async def analyze_symbol(self, update: Update, context: ContextTypes.DEFAULT_TYPE, symbol: str):
-        """Analyze a specific symbol using SMC strategy."""
+        """Analyze a trading symbol using exact 4-step SMC."""
+        if not await self.auth.check_access(update, context):
+            return
+        
+        # Extract symbol and check for JSON request
+        message_text = update.message.text.strip()
+        is_json_request = "json" in message_text.lower()
+        
+        # Extract symbol from command
+        if len(message_text.split()) > 1:
+            symbol = message_text.split()[1].upper()
+        else:
+            symbol = self.config.DEFAULT_SYMBOL
+        
         try:
             # Show typing indicator
             await context.bot.send_chat_action(
@@ -135,19 +148,26 @@ class BotHandlers:
             )
             
             # Perform SMC analysis
-            result = await self.smc_engine.analyze_symbol(symbol)
+            analysis = await self.smc_engine.analyze_symbol(symbol)
             
-            # Format and send result
-            message = MessageFormatter.format_signal_message(result)
-            await update.message.reply_text(message, parse_mode="Markdown")
+            # Save analysis
+            await self.storage.save_analysis(analysis)
             
-            # Store last result
-            await self.storage.set_last_analysis(update.effective_user.id, result)
+            # Format response
+            if is_json_request:
+                response = MessageFormatter.format_json_message(analysis)
+            else:
+                response = MessageFormatter.format_signal_message(analysis)
+            
+            await update.message.reply_text(
+                response,
+                parse_mode='Markdown',
+                disable_web_page_preview=True
+            )
             
         except Exception as e:
-            logger.error(f"Error analyzing {symbol}: {e}")
-            error_msg = MessageFormatter.format_error_message(f"Analysis failed: {str(e)}")
-            await update.message.reply_text(error_msg, parse_mode="Markdown")
+            error_msg = MessageFormatter.format_error_message(str(e))
+            await update.message.reply_text(error_msg)
     
     async def set_command(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
         """Handle /set command to set default symbol."""

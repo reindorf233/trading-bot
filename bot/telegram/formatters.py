@@ -1,59 +1,78 @@
 from datetime import datetime
 from typing import Optional
 
-from ..analysis.smc_engine_v5 import SMCAnalysisV5
+from ..analysis.smc_engine_final import SMCAnalysisFinal
 
 class MessageFormatter:
     """Format analysis results for Telegram messages."""
     
     @staticmethod
-    def format_signal_message(analysis: SMCAnalysisV5) -> str:
-        """Format SMC analysis result into Telegram message."""
+    def format_signal_message(analysis: SMCAnalysisFinal) -> str:
+        """Format SMC analysis result into exact structured output."""
         
         # Helper function to escape special characters for Telegram
         def escape_markdown(text):
             return str(text).replace('_', '\\_').replace('*', '\\*').replace('[', '\\[').replace(']', '\\]').replace('`', '\\`')
         
-        # Signal emoji
-        signal_emoji = "🟢" if analysis.signal in ["BUY", "SELL"] else "🔴"
-        
-        # Build message
+        # Build message in exact format requested
         message = (
-            f"{signal_emoji} **{escape_markdown(analysis.symbol)} Analysis**\n"
-            f"🕐 {analysis.timestamp.strftime('%Y-%m-%d %H:%M UTC')}\n"
-            f"📊 Timeframes: 4H | 30M | 5M\n\n"
+            f"**{escape_markdown(analysis.symbol)} Analysis**\n"
+            f"{analysis.timestamp.strftime('%Y-%m-%d %H:%M UTC')} | 4H | 30M | 5M\n\n"
             
-            f"🎯 **SIGNAL: {escape_markdown(analysis.signal)}** (Confidence: {analysis.confidence}%)\n\n"
+            f"**SIGNAL:** {escape_markdown(analysis.signal)} (Confidence: {analysis.confidence}%)\n\n"
             
-            f"📈 **MARKET BIAS:**\n"
+            f"**MARKET BIAS:**\n"
             f"Direction: {escape_markdown(analysis.direction)}\n"
             f"4H Trend: {escape_markdown(analysis.trend_4h)}\n"
             f"4H Event: {escape_markdown(analysis.event_4h)}\n\n"
             
-            f"🎯 **POINT OF INTEREST:**\n"
+            f"**POINT OF INTEREST:**\n"
             f"Type: {escape_markdown(analysis.poi_type)}\n"
             f"Zone: {escape_markdown(analysis.poi_zone)}\n\n"
             
-            f"💧 **LIQUIDITY:**\n"
+            f"**LIQUIDITY:**\n"
             f"Sweep: {escape_markdown(analysis.liquidity_sweep)}\n"
             f"{escape_markdown(analysis.sweep_details)}\n\n"
             
-            f"⚡ **CONFIRMATION:**\n"
+            f"**CONFIRMATION:**\n"
             f"Pattern: {escape_markdown(analysis.confirmation_pattern)}\n\n"
             
-            f"🤖 **AI ANALYSIS:**\n"
-            f"Strategy: {escape_markdown(analysis.ai_reasons)}\n"
+            f"**AI ANALYSIS:**\n"
+            f"{escape_markdown(analysis.ai_reasons)}\n"
             f"Risk: {escape_markdown(analysis.risk_notes)}\n\n"
             
-            f"⚠️ **DISCLAIMER:**\n"
-            "Educational purposes only.\n"
-            "Not financial advice. Trade at your own risk."
+            f"**DISCLAIMER:**\n"
+            "Educational purposes only. Not financial advice. Trade at your own risk."
         )
         
         return message
     
     @staticmethod
-    async def format_status_message(last_result: Optional[SMCAnalysisV5]) -> str:
+    def format_json_message(analysis: SMCAnalysisFinal) -> str:
+        """Format analysis as clean JSON output."""
+        return json.dumps({
+            'symbol': analysis.symbol,
+            'timestamp': analysis.timestamp.isoformat(),
+            'data_status': analysis.data_status,
+            'signal': analysis.signal,
+            'confidence': analysis.confidence,
+            'direction': analysis.direction,
+            'trend_4h': analysis.trend_4h,
+            'event_4h': analysis.event_4h,
+            'poi_type': analysis.poi_type,
+            'poi_zone': analysis.poi_zone,
+            'liquidity_sweep': analysis.liquidity_sweep,
+            'sweep_details': analysis.sweep_details,
+            'confirmation_pattern': analysis.confirmation_pattern,
+            'entry_zone': analysis.entry_zone,
+            'invalidation_level': analysis.invalidation_level,
+            'target1': analysis.target1,
+            'ai_reasons': analysis.ai_reasons,
+            'risk_notes': analysis.risk_notes
+        }, indent=2)
+    
+    @staticmethod
+    async def format_status_message(last_result: Optional[SMCAnalysisFinal]) -> str:
         """Format status message with last analysis."""
         if not last_result:
             return "� No analysis performed yet. Use /analyze to start."
