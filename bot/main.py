@@ -11,7 +11,7 @@ from apscheduler.triggers.interval import IntervalTrigger
 
 from .config import Config
 from .providers import DerivProvider
-from .analysis import SMCEngine
+from .analysis import SMCEngineV3
 from .telegram.auth import AuthManager
 from .telegram.formatters import MessageFormatter
 from .storage import BotStorage
@@ -30,7 +30,7 @@ class TradingBot:
         # Initialize data provider - using Deriv
         self.provider = DerivProvider()
         
-        self.smc_engine = SMCEngine(self.provider, self.config)
+        self.smc_engine = SMCEngineV3(self.provider, self.config)
         self.storage = BotStorage()
         self.scheduler = AsyncIOScheduler()
         self.scheduler.start()

@@ -5,7 +5,7 @@ from typing import Optional, Dict, Any
 from datetime import datetime
 from pathlib import Path
 
-from .analysis.smc_engine import SMCAnalysis
+from .analysis.smc_engine_v3 import SMCAnalysisV3
 
 logger = logging.getLogger(__name__)
 
@@ -99,7 +99,7 @@ class BotStorage:
             logger.error(f"Failed to get user symbol: {e}")
             return "EUR_USD"
     
-    async def save_analysis(self, result: SMCAnalysis):
+    async def save_analysis(self, result: SMCAnalysisV3):
         """Save analysis result."""
         try:
             with sqlite3.connect(self.db_path) as conn:
@@ -129,7 +129,7 @@ class BotStorage:
             logger.error(f"Failed to save analysis: {e}")
             raise
     
-    async def get_last_analysis(self, user_id: int = 1) -> Optional[SMCAnalysis]:
+    async def get_last_analysis(self, user_id: int = 1) -> Optional[SMCAnalysisV3]:
         """Get last analysis result."""
         try:
             with sqlite3.connect(self.db_path) as conn:
@@ -146,7 +146,7 @@ class BotStorage:
                 
                 if result:
                     result_data = json.loads(result[0])
-                    return SMCAnalysis(**result_data)
+                    return SMCAnalysisV3(**result_data)
                 
                 return None
                 
@@ -158,7 +158,7 @@ class BotStorage:
         self, 
         user_id: int = 1, 
         limit: int = 10
-    ) -> list[SMCAnalysis]:
+    ) -> list[SMCAnalysisV3]:
         """Get analysis history."""
         try:
             with sqlite3.connect(self.db_path) as conn:
@@ -174,7 +174,7 @@ class BotStorage:
                 results = []
                 for result in cursor.fetchall():
                     result_data = json.loads(result[0])
-                    results.append(SMCAnalysis(**result_data))
+                    results.append(SMCAnalysisV3(**result_data))
                 
                 return results
                 
