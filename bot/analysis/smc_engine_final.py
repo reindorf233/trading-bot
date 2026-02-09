@@ -10,7 +10,7 @@ from datetime import datetime, timedelta
 import numpy as np
 
 from ..providers.base import MarketDataProvider, Candle, DataProviderError
-from ..providers.market_data import MarketDataOnlineProvider
+from ..providers import MarketDataOnlineProvider
 from ..config import Config
 
 
@@ -87,7 +87,7 @@ class SMCEngineFinal:
         self.provider = provider
         self.config = config
         # Initialize market data provider (always available)
-        from ..providers.market_data import MarketDataOnlineProvider
+        from ..providers import MarketDataOnlineProvider
         self.market_data_provider = MarketDataOnlineProvider()
         self.market_data_available = True
     

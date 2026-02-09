@@ -27,7 +27,7 @@ except ImportError:
 logger = logging.getLogger(__name__)
 
 
-class MarketDataProvider:
+class MarketDataOnlineProvider:
     """Reliable market data provider for accurate asset pricing."""
     
     def __init__(self):
