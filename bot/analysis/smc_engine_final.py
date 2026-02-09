@@ -88,12 +88,21 @@ class SMCEngineFinal:
     
     def _is_crypto_pair(self, symbol: str) -> bool:
         """Detect if symbol is a cryptocurrency pair."""
-        crypto_prefixes = ['BTC', 'ETH', 'LTC', 'BCH', 'XRP', 'ADA', 'DOT', 'LINK', 'UNI']
+        crypto_prefixes = ['BTC', 'ETH', 'LTC', 'BCH', 'XRP', 'ADA', 'DOT', 'LINK', 'UNI', 'SOL', 'AVAX', 'MATIC', 'DOGE', 'BNB']
         return any(symbol.startswith(prefix) for prefix in crypto_prefixes)
     
     def _is_gold_pair(self, symbol: str) -> bool:
         """Detect if symbol is gold (XAUUSD)."""
         return symbol.startswith('XAU')
+    
+    def _is_metal_pair(self, symbol: str) -> bool:
+        """Detect if symbol is a metal (XAGUSD, XPTUSD, XPDUSD)."""
+        return symbol.startswith('XA') or symbol.startswith('XP')
+    
+    def _is_index_pair(self, symbol: str) -> bool:
+        """Detect if symbol is an index (e.g., US30, NAS100, SPX500)."""
+        index_prefixes = ['US', 'NAS', 'SPX', 'DAX', 'FTSE', 'Nikkei', 'CAC', 'STOXX']
+        return any(symbol.startswith(prefix) for prefix in index_prefixes)
     
     def _get_realistic_price_range(self, symbol: str) -> Tuple[float, float]:
         """Get realistic price range for symbol."""
@@ -102,12 +111,56 @@ class SMCEngineFinal:
                 return (60000, 100000)  # BTC range
             elif symbol.startswith('ETH'):
                 return (3000, 5000)   # ETH range
+            elif symbol.startswith('BNB'):
+                return (300, 800)     # BNB range
+            elif symbol.startswith('SOL'):
+                return (50, 300)      # SOL range
+            elif symbol.startswith('AVAX'):
+                return (10, 100)      # AVAX range
+            elif symbol.startswith('MATIC'):
+                return (0.5, 5)        # MATIC range
+            elif symbol.startswith('DOGE'):
+                return (0.05, 0.5)     # DOGE range
             elif symbol.startswith('LTC'):
                 return (60, 120)      # LTC range
+            elif symbol.startswith('BCH'):
+                return (200, 800)     # BCH range
+            elif symbol.startswith('XRP'):
+                return (0.3, 2)        # XRP range
+            elif symbol.startswith('ADA'):
+                return (0.3, 2)        # ADA range
+            elif symbol.startswith('DOT'):
+                return (4, 20)         # DOT range
+            elif symbol.startswith('LINK'):
+                return (8, 30)         # LINK range
+            elif symbol.startswith('UNI'):
+                return (4, 20)         # UNI range
             else:
-                return (0.5, 5000)    # General crypto range
+                return (0.01, 5000)   # General crypto range
         elif self._is_gold_pair(symbol):
             return (1800, 2200)      # Gold (XAUUSD) range - realistic for current market
+        elif self._is_metal_pair(symbol):
+            if symbol.startswith('XAG'):  # Silver
+                return (20, 35)       # Silver range
+            elif symbol.startswith('XPT'): # Platinum
+                return (800, 1200)    # Platinum range
+            elif symbol.startswith('XPD'): # Palladium
+                return (800, 1500)    # Palladium range
+            else:
+                return (10, 2000)     # General metal range
+        elif self._is_index_pair(symbol):
+            if 'US30' in symbol or 'DOW' in symbol:
+                return (30000, 40000)  # Dow Jones range
+            elif 'NAS' in symbol or 'NASDAQ' in symbol:
+                return (14000, 20000)  # NASDAQ range
+            elif 'SPX' in symbol or 'SP500' in symbol:
+                return (4000, 6000)    # S&P 500 range
+            elif 'DAX' in symbol:
+                return (14000, 18000) # DAX range
+            elif 'FTSE' in symbol:
+                return (7000, 9000)    # FTSE range
+            else:
+                return (1000, 50000)  # General index range
         else:
             # Forex pairs
             return (0.5, 2.0)  # Typical forex range
@@ -685,13 +738,60 @@ class SMCEngineFinal:
             
             # Adjust buffer sizes based on asset type
             if self._is_crypto_pair(analysis.symbol):
-                entry_buffer = 10.0
-                sl_buffer = 50.0
-                tp_distance = 100.0
+                if analysis.symbol.startswith('BTC'):
+                    entry_buffer = 50.0
+                    sl_buffer = 200.0
+                    tp_distance = 500.0
+                elif analysis.symbol.startswith('ETH'):
+                    entry_buffer = 5.0
+                    sl_buffer = 20.0
+                    tp_distance = 50.0
+                elif analysis.symbol.startswith('BNB'):
+                    entry_buffer = 2.0
+                    sl_buffer = 8.0
+                    tp_distance = 20.0
+                else:
+                    entry_buffer = 10.0
+                    sl_buffer = 50.0
+                    tp_distance = 100.0
             elif self._is_gold_pair(analysis.symbol):
                 entry_buffer = 0.5
                 sl_buffer = 2.0
                 tp_distance = 10.0
+            elif self._is_metal_pair(analysis.symbol):
+                if analysis.symbol.startswith('XAG'):  # Silver
+                    entry_buffer = 0.1
+                    sl_buffer = 0.5
+                    tp_distance = 1.0
+                elif analysis.symbol.startswith('XPT'): # Platinum
+                    entry_buffer = 5.0
+                    sl_buffer = 20.0
+                    tp_distance = 40.0
+                elif analysis.symbol.startswith('XPD'): # Palladium
+                    entry_buffer = 5.0
+                    sl_buffer = 25.0
+                    tp_distance = 50.0
+                else:
+                    entry_buffer = 2.0
+                    sl_buffer = 10.0
+                    tp_distance = 20.0
+            elif self._is_index_pair(analysis.symbol):
+                if 'US30' in analysis.symbol or 'DOW' in analysis.symbol:
+                    entry_buffer = 50.0
+                    sl_buffer = 200.0
+                    tp_distance = 400.0
+                elif 'NAS' in analysis.symbol or 'NASDAQ' in analysis.symbol:
+                    entry_buffer = 25.0
+                    sl_buffer = 100.0
+                    tp_distance = 200.0
+                elif 'SPX' in analysis.symbol or 'SP500' in analysis.symbol:
+                    entry_buffer = 12.0
+                    sl_buffer = 50.0
+                    tp_distance = 100.0
+                else:
+                    entry_buffer = 20.0
+                    sl_buffer = 80.0
+                    tp_distance = 160.0
             else:
                 entry_buffer = 0.0005
                 sl_buffer = 0.0010
@@ -710,13 +810,60 @@ class SMCEngineFinal:
             
             # Adjust buffer sizes based on asset type
             if self._is_crypto_pair(analysis.symbol):
-                entry_buffer = 10.0
-                sl_buffer = 50.0
-                tp_distance = 100.0
+                if analysis.symbol.startswith('BTC'):
+                    entry_buffer = 50.0
+                    sl_buffer = 200.0
+                    tp_distance = 500.0
+                elif analysis.symbol.startswith('ETH'):
+                    entry_buffer = 5.0
+                    sl_buffer = 20.0
+                    tp_distance = 50.0
+                elif analysis.symbol.startswith('BNB'):
+                    entry_buffer = 2.0
+                    sl_buffer = 8.0
+                    tp_distance = 20.0
+                else:
+                    entry_buffer = 10.0
+                    sl_buffer = 50.0
+                    tp_distance = 100.0
             elif self._is_gold_pair(analysis.symbol):
                 entry_buffer = 0.5
                 sl_buffer = 2.0
                 tp_distance = 10.0
+            elif self._is_metal_pair(analysis.symbol):
+                if analysis.symbol.startswith('XAG'):  # Silver
+                    entry_buffer = 0.1
+                    sl_buffer = 0.5
+                    tp_distance = 1.0
+                elif analysis.symbol.startswith('XPT'): # Platinum
+                    entry_buffer = 5.0
+                    sl_buffer = 20.0
+                    tp_distance = 40.0
+                elif analysis.symbol.startswith('XPD'): # Palladium
+                    entry_buffer = 5.0
+                    sl_buffer = 25.0
+                    tp_distance = 50.0
+                else:
+                    entry_buffer = 2.0
+                    sl_buffer = 10.0
+                    tp_distance = 20.0
+            elif self._is_index_pair(analysis.symbol):
+                if 'US30' in analysis.symbol or 'DOW' in analysis.symbol:
+                    entry_buffer = 50.0
+                    sl_buffer = 200.0
+                    tp_distance = 400.0
+                elif 'NAS' in analysis.symbol or 'NASDAQ' in analysis.symbol:
+                    entry_buffer = 25.0
+                    sl_buffer = 100.0
+                    tp_distance = 200.0
+                elif 'SPX' in analysis.symbol or 'SP500' in analysis.symbol:
+                    entry_buffer = 12.0
+                    sl_buffer = 50.0
+                    tp_distance = 100.0
+                else:
+                    entry_buffer = 20.0
+                    sl_buffer = 80.0
+                    tp_distance = 160.0
             else:
                 entry_buffer = 0.0005
                 sl_buffer = 0.0010
@@ -839,11 +986,48 @@ class SMCEngineFinal:
             base_price = (price_range[0] + price_range[1]) / 2
             
             if self._is_crypto_pair(symbol):
-                zone_size = 100  # Crypto zones are larger
+                if symbol.startswith('BTC'):
+                    zone_size = 500    # BTC zones
+                elif symbol.startswith('ETH'):
+                    zone_size = 50     # ETH zones
+                elif symbol.startswith('BNB'):
+                    zone_size = 20     # BNB zones
+                elif symbol.startswith('SOL'):
+                    zone_size = 10     # SOL zones
+                elif symbol.startswith('AVAX'):
+                    zone_size = 5      # AVAX zones
+                elif symbol.startswith('MATIC'):
+                    zone_size = 0.2    # MATIC zones
+                elif symbol.startswith('DOGE'):
+                    zone_size = 0.02   # DOGE zones
+                else:
+                    zone_size = 100    # General crypto zones
             elif self._is_gold_pair(symbol):
-                zone_size = 5.0   # Gold zones (XAUUSD) are in the thousands
+                zone_size = 5.0        # Gold zones (XAUUSD)
+            elif self._is_metal_pair(symbol):
+                if symbol.startswith('XAG'):  # Silver
+                    zone_size = 0.5     # Silver zones
+                elif symbol.startswith('XPT'): # Platinum
+                    zone_size = 20      # Platinum zones
+                elif symbol.startswith('XPD'): # Palladium
+                    zone_size = 25      # Palladium zones
+                else:
+                    zone_size = 10      # General metal zones
+            elif self._is_index_pair(symbol):
+                if 'US30' in symbol or 'DOW' in symbol:
+                    zone_size = 200     # Dow Jones zones
+                elif 'NAS' in symbol or 'NASDAQ' in symbol:
+                    zone_size = 100     # NASDAQ zones
+                elif 'SPX' in symbol or 'SP500' in symbol:
+                    zone_size = 50      # S&P 500 zones
+                elif 'DAX' in symbol:
+                    zone_size = 100     # DAX zones
+                elif 'FTSE' in symbol:
+                    zone_size = 50      # FTSE zones
+                else:
+                    zone_size = 100     # General index zones
             else:
-                zone_size = 0.0010  # Forex zones are smaller
+                zone_size = 0.0010      # Forex zones
             
             analysis.poi_zone = f"{base_price - zone_size:.5f}-{base_price + zone_size:.5f}"
             
@@ -934,11 +1118,48 @@ class SMCEngineFinal:
         base_price = (price_range[0] + price_range[1]) / 2
         
         if self._is_crypto_pair(analysis.symbol):
-            zone_size = 100
+            if analysis.symbol.startswith('BTC'):
+                zone_size = 500    # BTC zones
+            elif analysis.symbol.startswith('ETH'):
+                zone_size = 50     # ETH zones
+            elif analysis.symbol.startswith('BNB'):
+                zone_size = 20     # BNB zones
+            elif analysis.symbol.startswith('SOL'):
+                zone_size = 10     # SOL zones
+            elif analysis.symbol.startswith('AVAX'):
+                zone_size = 5      # AVAX zones
+            elif analysis.symbol.startswith('MATIC'):
+                zone_size = 0.2    # MATIC zones
+            elif analysis.symbol.startswith('DOGE'):
+                zone_size = 0.02   # DOGE zones
+            else:
+                zone_size = 100    # General crypto zones
         elif self._is_gold_pair(analysis.symbol):
-            zone_size = 5.0   # Gold zones (XAUUSD) are in the thousands
+            zone_size = 5.0        # Gold zones (XAUUSD)
+        elif self._is_metal_pair(analysis.symbol):
+            if analysis.symbol.startswith('XAG'):  # Silver
+                zone_size = 0.5     # Silver zones
+            elif analysis.symbol.startswith('XPT'): # Platinum
+                zone_size = 20      # Platinum zones
+            elif analysis.symbol.startswith('XPD'): # Palladium
+                zone_size = 25      # Palladium zones
+            else:
+                zone_size = 10      # General metal zones
+        elif self._is_index_pair(analysis.symbol):
+            if 'US30' in analysis.symbol or 'DOW' in analysis.symbol:
+                zone_size = 200     # Dow Jones zones
+            elif 'NAS' in analysis.symbol or 'NASDAQ' in analysis.symbol:
+                zone_size = 100     # NASDAQ zones
+            elif 'SPX' in analysis.symbol or 'SP500' in analysis.symbol:
+                zone_size = 50      # S&P 500 zones
+            elif 'DAX' in analysis.symbol:
+                zone_size = 100     # DAX zones
+            elif 'FTSE' in analysis.symbol:
+                zone_size = 50      # FTSE zones
+            else:
+                zone_size = 100     # General index zones
         else:
-            zone_size = 0.0010  # Forex zones are smaller
+            zone_size = 0.0010      # Forex zones
         
         analysis.poi_zone = f"{base_price - zone_size:.5f}-{base_price + zone_size:.5f}"
         
