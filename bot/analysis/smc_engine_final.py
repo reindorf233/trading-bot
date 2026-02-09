@@ -138,7 +138,7 @@ class SMCEngineFinal:
             else:
                 return (0.01, 5000)   # General crypto range
         elif self._is_gold_pair(symbol):
-            return (1800, 2200)      # Gold (XAUUSD) range - realistic for current market
+            return (4000, 5000)      # Gold (XAUUSD) range - current market levels 2026
         elif self._is_metal_pair(symbol):
             if symbol.startswith('XAG'):  # Silver
                 return (20, 35)       # Silver range
@@ -755,9 +755,9 @@ class SMCEngineFinal:
                     sl_buffer = 50.0
                     tp_distance = 100.0
             elif self._is_gold_pair(analysis.symbol):
-                entry_buffer = 0.5
-                sl_buffer = 2.0
-                tp_distance = 10.0
+                entry_buffer = 1.0
+                sl_buffer = 5.0
+                tp_distance = 20.0
             elif self._is_metal_pair(analysis.symbol):
                 if analysis.symbol.startswith('XAG'):  # Silver
                     entry_buffer = 0.1
@@ -827,9 +827,9 @@ class SMCEngineFinal:
                     sl_buffer = 50.0
                     tp_distance = 100.0
             elif self._is_gold_pair(analysis.symbol):
-                entry_buffer = 0.5
-                sl_buffer = 2.0
-                tp_distance = 10.0
+                entry_buffer = 1.0
+                sl_buffer = 5.0
+                tp_distance = 20.0
             elif self._is_metal_pair(analysis.symbol):
                 if analysis.symbol.startswith('XAG'):  # Silver
                     entry_buffer = 0.1
@@ -1003,7 +1003,7 @@ class SMCEngineFinal:
                 else:
                     zone_size = 100    # General crypto zones
             elif self._is_gold_pair(symbol):
-                zone_size = 5.0        # Gold zones (XAUUSD)
+                zone_size = 10.0       # Gold zones (XAUUSD) - appropriate for $4000-5000 range
             elif self._is_metal_pair(symbol):
                 if symbol.startswith('XAG'):  # Silver
                     zone_size = 0.5     # Silver zones
@@ -1131,11 +1131,11 @@ class SMCEngineFinal:
             elif analysis.symbol.startswith('MATIC'):
                 zone_size = 0.2    # MATIC zones
             elif analysis.symbol.startswith('DOGE'):
-                zone_size = 0.02   # DOGE zones
+                zone_size = 0.005   # DOGE zones
             else:
                 zone_size = 100    # General crypto zones
         elif self._is_gold_pair(analysis.symbol):
-            zone_size = 5.0        # Gold zones (XAUUSD)
+            zone_size = 10.0       # Gold zones (XAUUSD) - appropriate for $4000-5000 range
         elif self._is_metal_pair(analysis.symbol):
             if analysis.symbol.startswith('XAG'):  # Silver
                 zone_size = 0.5     # Silver zones
