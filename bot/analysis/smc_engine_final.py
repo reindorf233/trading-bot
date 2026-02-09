@@ -138,7 +138,7 @@ class SMCEngineFinal:
         return swing_highs, swing_lows
     
     def _detect_bos_mss(self, candles: List[Candle]) -> Tuple[str, str, str]:
-        """Detect BOS (continuation) or MSS/CHoCH (reversal) on 4H."""
+        """Detect BOS/MSS with proper HH/HL/LH/LL analysis on 4H."""
         swing_highs, swing_lows = self._get_swing_points(candles, window=5)
         
         if len(swing_highs) < 2 or len(swing_lows) < 2:
@@ -149,23 +149,38 @@ class SMCEngineFinal:
         
         current_price = candles[0].close
         
-        # BOS detection (continuation)
-        if current_price > recent_highs[0]['price']:
-            return "Bullish", "BOS", f"Price broke above recent high at {recent_highs[0]['price']:.5f}"
-        elif current_price < recent_lows[0]['price']:
-            return "Bearish", "BOS", f"Price broke below recent low at {recent_lows[0]['price']:.5f}"
-        
-        # MSS detection (reversal)
+        # Check for Higher Highs + Higher Lows (Bullish)
         if (len(recent_highs) >= 2 and len(recent_lows) >= 2 and
-            recent_highs[0]['price'] < recent_highs[1]['price'] and
+            recent_highs[0]['price'] > recent_highs[1]['price'] and
             recent_lows[0]['price'] > recent_lows[1]['price']):
-            return "Bullish", "MSS", "Lower highs and higher lows detected"
-        elif (len(recent_highs) >= 2 and len(recent_lows) >= 2 and
-              recent_highs[0]['price'] > recent_highs[1]['price'] and
-              recent_lows[0]['price'] < recent_lows[1]['price']):
-            return "Bearish", "MSS", "Higher highs and lower lows detected"
+            
+            # Check for BOS upward
+            if current_price > recent_highs[0]['price']:
+                return "Bullish", "BOS", f"HH + HL + BOS upward (HH: {recent_highs[0]['price']:.5f}, HL: {recent_lows[0]['price']:.5f})"
+            else:
+                return "Bullish", "None", f"HH + HL structure (HH: {recent_highs[0]['price']:.5f}, HL: {recent_lows[0]['price']:.5f})"
         
-        return "Neutral", "None", "No clear structure established"
+        # Check for Lower Highs + Lower Lows (Bearish)
+        elif (len(recent_highs) >= 2 and len(recent_lows) >= 2 and
+              recent_highs[0]['price'] < recent_highs[1]['price'] and
+              recent_lows[0]['price'] < recent_lows[1]['price']):
+            
+            # Check for BOS downward
+            if current_price < recent_lows[0]['price']:
+                return "Bearish", "BOS", f"LH + LL + BOS downward (LH: {recent_highs[0]['price']:.5f}, LL: {recent_lows[0]['price']:.5f})"
+            else:
+                return "Bearish", "None", f"LH + LL structure (LH: {recent_highs[0]['price']:.5f}, LL: {recent_lows[0]['price']:.5f})"
+        
+        # Check for CHoCH/MSS without follow-through (Neutral)
+        elif (len(recent_highs) >= 2 and len(recent_lows) >= 2):
+            if (recent_highs[0]['price'] > recent_highs[1]['price'] and
+                recent_lows[0]['price'] < recent_lows[1]['price']):
+                return "Neutral", "CHoCH/MSS", "CHoCH/MSS without follow-through - choppy structure"
+            elif (recent_highs[0]['price'] < recent_highs[1]['price'] and
+                  recent_lows[0]['price'] > recent_lows[1]['price']):
+                return "Neutral", "CHoCH/MSS", "CHoCH/MSS without follow-through - choppy structure"
+        
+        return "Neutral", "None", "Choppy or unclear structure"
     
     def _detect_fvg(self, candles: List[Candle]) -> Optional[Dict]:
         """Detect Fair Value Gaps (FVG) on 30M."""
@@ -594,26 +609,34 @@ class SMCEngineFinal:
             if analysis.confirmation_pattern in ["BE", "RB", "Morning Star", "Evening Star", "MSS + BB"]:
                 confidence += 10
         
+        # FINAL DECISION RULES (strict)
+        # No sweep OR no confirmation → confidence ≤ 40% → NO TRADE
+        if analysis.liquidity_sweep == "No" or analysis.confirmation_pattern == "None":
+            confidence = min(confidence, 40)  # Cap at 40%
+            if analysis.signal != "NO TRADE":
+                analysis.signal = "NO TRADE"
+                analysis.ai_reasons = "No sweep or no confirmation - confidence capped at 40%"
+        
         # Check for conflicts - STRICT ALIGNMENT RULES
         # POI vs Direction conflicts - FORCED NO TRADE
         if analysis.direction == "Bullish" and "Bearish" in analysis.poi_type:
             confidence = 0  # Force NO TRADE
             analysis.signal = "NO TRADE"
-            analysis.ai_reasons = "Conflicting POI/pattern – waiting for alignment"
+            analysis.ai_reasons = "Conflicting POI/pattern"
         elif analysis.direction == "Bearish" and "Bullish" in analysis.poi_type:
             confidence = 0  # Force NO TRADE
             analysis.signal = "NO TRADE"
-            analysis.ai_reasons = "Conflicting POI/pattern – waiting for alignment"
+            analysis.ai_reasons = "Conflicting POI/pattern"
         
         # Pattern vs Direction conflicts - FORCED NO TRADE
         if analysis.direction == "Bullish" and "Bearish" in analysis.confirmation_pattern:
             confidence = 0  # Force NO TRADE
             analysis.signal = "NO TRADE"
-            analysis.ai_reasons = "Conflicting POI/pattern – waiting for alignment"
+            analysis.ai_reasons = "Conflicting POI/pattern"
         elif analysis.direction == "Bearish" and "Bullish" in analysis.confirmation_pattern:
             confidence = 0  # Force NO TRADE
             analysis.signal = "NO TRADE"
-            analysis.ai_reasons = "Conflicting POI/pattern – waiting for alignment"
+            analysis.ai_reasons = "Conflicting POI/pattern"
         
         # BOOST for perfectly aligned POI and patterns
         if analysis.direction == "Bullish" and "Bullish" in analysis.poi_type:
@@ -636,31 +659,40 @@ class SMCEngineFinal:
         if analysis.signal == "NO TRADE":
             return "NO TRADE", "N/A", "N/A", analysis.ai_reasons
         
-        # BUY/SELL only if ≥70% AND perfect alignment
-        if confidence < 70:
-            return "NO TRADE", "N/A", "N/A", f"Confidence {confidence}% - waiting for better confluence"
+        # BUY/SELL only if ≥75% AND perfect alignment
+        if confidence < 75:
+            return "NO TRADE", "N/A", "N/A", f"Confidence {confidence}% - below 75% threshold"
         
         # Check for perfect alignment before allowing BUY/SELL
         if analysis.direction == "Bullish":
             if "Bearish" in analysis.poi_type or "Bearish" in analysis.confirmation_pattern:
-                return "NO TRADE", "N/A", "N/A", "Conflicting POI/pattern – waiting for alignment"
+                return "NO TRADE", "N/A", "N/A", "Conflicting POI/pattern"
         elif analysis.direction == "Bearish":
             if "Bullish" in analysis.poi_type or "Bullish" in analysis.confirmation_pattern:
-                return "NO TRADE", "N/A", "N/A", "Conflicting POI/pattern – waiting for alignment"
+                return "NO TRADE", "N/A", "N/A", "Conflicting POI/pattern"
         
+        # Generate trade levels for BUY/SELL
         if analysis.signal == "BUY":
-            entry = analysis.poi_zone
-            sl = analysis.poi_zone.split('-')[0] if '-' in analysis.poi_zone else analysis.poi_zone
-            tp = f"{float(sl) + 0.0020:.5f}"
+            # Entry: at/near POI edge (bullish = above POI low)
+            poi_low = float(analysis.poi_zone.split('-')[0]) if '-' in analysis.poi_zone else float(analysis.poi_zone)
+            poi_high = float(analysis.poi_zone.split('-')[1]) if '-' in analysis.poi_zone else float(analysis.poi_zone)
             
-            return "BUY", entry, sl, tp, f"Bullish setup with {confidence}% confidence"
+            entry = f"{poi_low + 0.0005:.5f}"  # Above POI low
+            sl = f"{poi_low - 0.0010:.5f}"  # Below POI low + buffer
+            tp = f"{poi_high + 0.0020:.5f}"  # Next liquidity level (1:2-1:3 RR minimum)
+            
+            return "BUY", entry, sl, tp, f"Perfect alignment with {confidence}% confidence"
         
         elif analysis.signal == "SELL":
-            entry = analysis.poi_zone
-            sl = analysis.poi_zone.split('-')[1] if '-' in analysis.poi_zone else analysis.poi_zone
-            tp = f"{float(sl) - 0.0020:.5f}"
+            # Entry: at/near POI edge (bearish = below POI high)
+            poi_low = float(analysis.poi_zone.split('-')[0]) if '-' in analysis.poi_zone else float(analysis.poi_zone)
+            poi_high = float(analysis.poi_zone.split('-')[1]) if '-' in analysis.poi_zone else float(analysis.poi_zone)
             
-            return "SELL", entry, sl, tp, f"Bearish setup with {confidence}% confidence"
+            entry = f"{poi_high - 0.0005:.5f}"  # Below POI high
+            sl = f"{poi_high + 0.0010:.5f}"  # Above POI high + buffer
+            tp = f"{poi_low - 0.0020:.5f}"  # Next liquidity level (1:2-1:3 RR minimum)
+            
+            return "SELL", entry, sl, tp, f"Perfect alignment with {confidence}% confidence"
         
         return "NO TRADE", "N/A", "N/A", "Waiting for better confluence"
     
@@ -753,7 +785,7 @@ class SMCEngineFinal:
     async def _fallback_smc_emulation(self, analysis: SMCAnalysisFinal, symbol: str, error: str = None) -> SMCAnalysisFinal:
         """Fallback SMC emulation when live data fails."""
         try:
-            analysis.data_status = "Emulated – verify live on Deriv/TradingView/MT5"
+            analysis.data_status = "Emulated historical – verify real-time on Deriv/TradingView/MT5"
             
             import random
             

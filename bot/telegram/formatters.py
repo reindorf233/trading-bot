@@ -8,35 +8,60 @@ class MessageFormatter:
     
     @staticmethod
     def format_signal_message(analysis: SMCAnalysisFinal) -> str:
-        """Format SMC analysis result into exact structured output."""
+        """Format SMC analysis result into container-based output."""
         
         # Helper function to escape special characters for Telegram
         def escape_markdown(text):
             return str(text).replace('_', '\\_').replace('*', '\\*').replace('[', '\\[').replace(']', '\\]').replace('`', '\\`')
         
-        # Build message in exact format requested
+        # Build message in container format
         message = (
             f"**{escape_markdown(analysis.symbol)} Analysis**\n"
             f"{analysis.timestamp.strftime('%Y-%m-%d %H:%M UTC')} | 4H | 30M | 5M\n\n"
             
-            f"**SIGNAL:** {escape_markdown(analysis.signal)} (Confidence: {analysis.confidence}%)\n\n"
+            f"╔════════════════════════════╗\n"
+            f"║ SIGNAL: {escape_markdown(analysis.signal)} ║\n"
+            f"║ Confidence: {analysis.confidence}%            ║\n"
+            f"╚════════════════════════════╝\n\n"
             
-            f"**MARKET BIAS:**\n"
-            f"Direction: {escape_markdown(analysis.direction)}\n"
-            f"4H Trend: {escape_markdown(analysis.trend_4h)}\n"
-            f"4H Event: {escape_markdown(analysis.event_4h)}\n\n"
+            f"╔════════════════════════════╗\n"
+            f"║ MARKET BIAS                ║\n"
+            f"║ Direction: {escape_markdown(analysis.direction)}             ║\n"
+            f"║ 4H Trend: {escape_markdown(analysis.trend_4h)}              ║\n"
+            f"║ 4H Event: {escape_markdown(analysis.event_4h)}              ║\n"
+            f"╚════════════════════════════╝\n\n"
             
-            f"**POINT OF INTEREST:**\n"
-            f"Type: {escape_markdown(analysis.poi_type)}\n"
-            f"Zone: {escape_markdown(analysis.poi_zone)}\n\n"
+            f"╔════════════════════════════╗\n"
+            f"║ POINT OF INTEREST          ║\n"
+            f"║ Type: {escape_markdown(analysis.poi_type)}                  ║\n"
+            f"║ Zone: {escape_markdown(analysis.poi_zone)}                  ║\n"
+            f"╚════════════════════════════╝\n\n"
             
-            f"**LIQUIDITY:**\n"
-            f"Sweep: {escape_markdown(analysis.liquidity_sweep)}\n"
-            f"{escape_markdown(analysis.sweep_details)}\n\n"
+            f"╔════════════════════════════╗\n"
+            f"║ LIQUIDITY                  ║\n"
+            f"║ Sweep: {escape_markdown(analysis.liquidity_sweep)}              ║\n"
+            f"║ Details: {escape_markdown(analysis.sweep_details)}               ║\n"
+            f"╚════════════════════════════╝\n\n"
             
-            f"**CONFIRMATION:**\n"
-            f"Pattern: {escape_markdown(analysis.confirmation_pattern)}\n\n"
-            
+            f"╔════════════════════════════╗\n"
+            f"║ CONFIRMATION               ║\n"
+            f"║ Pattern: {escape_markdown(analysis.confirmation_pattern)} or None       ║\n"
+            f"╚════════════════════════════╝\n"
+        )
+        
+        # Add trade levels container only if BUY/SELL
+        if analysis.signal in ["BUY", "SELL"]:
+            message += (
+                f"\n╔═══════════════════════════════════════╗\n"
+                f"║ TRADE LEVELS (only if BUY/SELL)       ║\n"
+                f"║ Entry Point: {escape_markdown(analysis.entry_zone)}                      ║\n"
+                f"║ Stop Loss (SL): {escape_markdown(analysis.invalidation_level)}                   ║\n"
+                f"║ Take Profit (TP): {escape_markdown(analysis.target1)}                 ║\n"
+                f"╚═══════════════════════════════════════╝\n\n"
+            )
+        
+        # Add AI Analysis and final sections
+        message += (
             f"**AI ANALYSIS:**\n"
             f"{escape_markdown(analysis.ai_reasons)}\n"
             f"Risk: {escape_markdown(analysis.risk_notes)}\n\n"
