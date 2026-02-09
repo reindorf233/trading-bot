@@ -91,6 +91,10 @@ class SMCEngineFinal:
         crypto_prefixes = ['BTC', 'ETH', 'LTC', 'BCH', 'XRP', 'ADA', 'DOT', 'LINK', 'UNI']
         return any(symbol.startswith(prefix) for prefix in crypto_prefixes)
     
+    def _is_gold_pair(self, symbol: str) -> bool:
+        """Detect if symbol is gold (XAUUSD)."""
+        return symbol.startswith('XAU')
+    
     def _get_realistic_price_range(self, symbol: str) -> Tuple[float, float]:
         """Get realistic price range for symbol."""
         if self._is_crypto_pair(symbol):
@@ -102,6 +106,8 @@ class SMCEngineFinal:
                 return (60, 120)      # LTC range
             else:
                 return (0.5, 5000)    # General crypto range
+        elif self._is_gold_pair(symbol):
+            return (1800, 2200)      # Gold (XAUUSD) range - realistic for current market
         else:
             # Forex pairs
             return (0.5, 2.0)  # Typical forex range
@@ -677,9 +683,23 @@ class SMCEngineFinal:
             poi_low = float(analysis.poi_zone.split('-')[0]) if '-' in analysis.poi_zone else float(analysis.poi_zone)
             poi_high = float(analysis.poi_zone.split('-')[1]) if '-' in analysis.poi_zone else float(analysis.poi_zone)
             
-            entry = f"{poi_low + 0.0005:.5f}"  # Above POI low
-            sl = f"{poi_low - 0.0010:.5f}"  # Below POI low + buffer
-            tp = f"{poi_high + 0.0020:.5f}"  # Next liquidity level (1:2-1:3 RR minimum)
+            # Adjust buffer sizes based on asset type
+            if self._is_crypto_pair(analysis.symbol):
+                entry_buffer = 10.0
+                sl_buffer = 50.0
+                tp_distance = 100.0
+            elif self._is_gold_pair(analysis.symbol):
+                entry_buffer = 0.5
+                sl_buffer = 2.0
+                tp_distance = 10.0
+            else:
+                entry_buffer = 0.0005
+                sl_buffer = 0.0010
+                tp_distance = 0.0020
+            
+            entry = f"{poi_low + entry_buffer:.5f}"  # Above POI low
+            sl = f"{poi_low - sl_buffer:.5f}"  # Below POI low + buffer
+            tp = f"{poi_high + tp_distance:.5f}"  # Next liquidity level (1:2-1:3 RR minimum)
             
             return "BUY", entry, sl, tp, f"Perfect alignment with {confidence}% confidence"
         
@@ -688,9 +708,23 @@ class SMCEngineFinal:
             poi_low = float(analysis.poi_zone.split('-')[0]) if '-' in analysis.poi_zone else float(analysis.poi_zone)
             poi_high = float(analysis.poi_zone.split('-')[1]) if '-' in analysis.poi_zone else float(analysis.poi_zone)
             
-            entry = f"{poi_high - 0.0005:.5f}"  # Below POI high
-            sl = f"{poi_high + 0.0010:.5f}"  # Above POI high + buffer
-            tp = f"{poi_low - 0.0020:.5f}"  # Next liquidity level (1:2-1:3 RR minimum)
+            # Adjust buffer sizes based on asset type
+            if self._is_crypto_pair(analysis.symbol):
+                entry_buffer = 10.0
+                sl_buffer = 50.0
+                tp_distance = 100.0
+            elif self._is_gold_pair(analysis.symbol):
+                entry_buffer = 0.5
+                sl_buffer = 2.0
+                tp_distance = 10.0
+            else:
+                entry_buffer = 0.0005
+                sl_buffer = 0.0010
+                tp_distance = 0.0020
+            
+            entry = f"{poi_high - entry_buffer:.5f}"  # Below POI high
+            sl = f"{poi_high + sl_buffer:.5f}"  # Above POI high + buffer
+            tp = f"{poi_low - tp_distance:.5f}"  # Next liquidity level (1:2-1:3 RR minimum)
             
             return "SELL", entry, sl, tp, f"Perfect alignment with {confidence}% confidence"
         
@@ -806,6 +840,8 @@ class SMCEngineFinal:
             
             if self._is_crypto_pair(symbol):
                 zone_size = 100  # Crypto zones are larger
+            elif self._is_gold_pair(symbol):
+                zone_size = 5.0   # Gold zones (XAUUSD) are in the thousands
             else:
                 zone_size = 0.0010  # Forex zones are smaller
             
@@ -899,8 +935,10 @@ class SMCEngineFinal:
         
         if self._is_crypto_pair(analysis.symbol):
             zone_size = 100
+        elif self._is_gold_pair(analysis.symbol):
+            zone_size = 5.0   # Gold zones (XAUUSD) are in the thousands
         else:
-            zone_size = 0.0010
+            zone_size = 0.0010  # Forex zones are smaller
         
         analysis.poi_zone = f"{base_price - zone_size:.5f}-{base_price + zone_size:.5f}"
         
