@@ -86,15 +86,10 @@ class SMCEngineFinal:
     def __init__(self, provider: MarketDataProvider, config: Config):
         self.provider = provider
         self.config = config
-        # Initialize market data provider with error handling
-        try:
-            from ..providers.market_data import MarketDataOnlineProvider
-            self.market_data_provider = MarketDataOnlineProvider()
-            self.market_data_available = True
-        except Exception as e:
-            logger.warning(f"Market data provider not available: {e}")
-            self.market_data_provider = None
-            self.market_data_available = False
+        # Initialize market data provider (always available)
+        from ..providers.market_data import MarketDataOnlineProvider
+        self.market_data_provider = MarketDataOnlineProvider()
+        self.market_data_available = True
     
     def _is_crypto_pair(self, symbol: str) -> bool:
         """Detect if symbol is a cryptocurrency pair."""
@@ -115,17 +110,16 @@ class SMCEngineFinal:
         return any(symbol.startswith(prefix) for prefix in index_prefixes)
     
     async def _get_realistic_price_range(self, symbol: str) -> Tuple[float, float]:
-        """Get realistic price range for symbol using real-time market data."""
+        """Get realistic price range for symbol using market data."""
         try:
-            # Try to get real-time price range from market data provider
-            if self.market_data_available and self.market_data_provider:
-                price_range = await self.market_data_provider.get_price_range(symbol)
-                if price_range and price_range[0] > 0 and price_range[1] > 0:
-                    return price_range
+            # Always try to get real-time price range from market data provider
+            price_range = await self.market_data_provider.get_price_range(symbol)
+            if price_range and price_range[0] > 0 and price_range[1] > 0:
+                return price_range
         except Exception as e:
-            logger.warning(f"Failed to get real-time price range for {symbol}: {e}")
+            logger.warning(f"Failed to get market data for {symbol}: {e}")
         
-        # Fallback to hardcoded ranges if real-time data fails
+        # Final fallback to hardcoded ranges if market data fails
         return self._get_fallback_price_range(symbol)
     
     def _get_fallback_price_range(self, symbol: str) -> Tuple[float, float]:
@@ -146,48 +140,62 @@ class SMCEngineFinal:
             elif symbol.startswith('DOGE'):
                 return (0.05, 0.5)     # DOGE range
             elif symbol.startswith('LTC'):
-                return (60, 120)      # LTC range
+                return (72, 108)      # LTC current range
             elif symbol.startswith('BCH'):
-                return (200, 800)     # BCH range
+                return (320, 480)     # BCH current range
             elif symbol.startswith('XRP'):
-                return (0.3, 2)        # XRP range
+                return (0.48, 0.72)   # XRP current range
             elif symbol.startswith('ADA'):
-                return (0.3, 2)        # ADA range
+                return (0.48, 0.72)   # ADA current range
             elif symbol.startswith('DOT'):
-                return (4, 20)         # DOT range
+                return (6.4, 9.6)     # DOT current range
             elif symbol.startswith('LINK'):
-                return (8, 30)         # LINK range
+                return (12, 18)      # LINK current range
             elif symbol.startswith('UNI'):
-                return (4, 20)         # UNI range
+                return (6.4, 9.6)     # UNI current range
             else:
                 return (0.01, 5000)   # General crypto range
         elif self._is_gold_pair(symbol):
-            return (4000, 5000)      # Gold (XAUUSD) range - current market levels 2026
+            return (4512, 4988)      # Gold current range (4750 ±5%)
         elif self._is_metal_pair(symbol):
             if symbol.startswith('XAG'):  # Silver
-                return (20, 35)       # Silver range
+                return (25.2, 30.8)   # Silver current range
             elif symbol.startswith('XPT'): # Platinum
-                return (800, 1200)    # Platinum range
+                return (950, 1050)   # Platinum current range
             elif symbol.startswith('XPD'): # Palladium
-                return (800, 1500)    # Palladium range
+                return (1140, 1260)  # Palladium current range
             else:
                 return (10, 2000)     # General metal range
         elif self._is_index_pair(symbol):
             if 'US30' in symbol or 'DOW' in symbol:
-                return (30000, 40000)  # Dow Jones range
-            elif 'NAS' in symbol or 'NASDAQ' in symbol:
-                return (14000, 20000)  # NASDAQ range
+                return (36860, 39140)  # Dow Jones current range
+            elif 'NAS' in symbol:
+                return (17460, 18540)  # NASDAQ current range
             elif 'SPX' in symbol or 'SP500' in symbol:
-                return (4000, 6000)    # S&P 500 range
+                return (5335, 5665)    # S&P 500 current range
             elif 'DAX' in symbol:
-                return (14000, 18000) # DAX range
+                return (16005, 16995)   # DAX current range
             elif 'FTSE' in symbol:
-                return (7000, 9000)    # FTSE range
+                return (7760, 8240)    # FTSE current range
             else:
-                return (1000, 50000)  # General index range
+                return (970, 51500)  # General index range
         else:
-            # Forex pairs
-            return (0.5, 2.0)  # Typical forex range
+            # Forex current ranges
+            forex_rates = {
+                'EURUSD': (1.0550, 1.0950),
+                'GBPUSD': (1.2450, 1.2850),
+                'USDJPY': (148.0, 152.0),
+                'USDCHF': (0.8900, 0.9300),
+                'AUDUSD': (0.6350, 0.6650),
+                'NZDUSD': (0.5950, 0.6250),
+                'USDCAD': (1.3300, 1.3900),
+                'EURAUD': (1.0650, 1.1050),
+                'EURCHF': (0.9200, 0.9600),
+                'EURJPY': (159.0, 165.0),
+                'GBPJPY': (187.0, 193.0),
+                'EURGBP': (0.8450, 0.8750)
+            }
+            return forex_rates.get(symbol, (0.49, 2.02))  # Default forex range
     
     def _detect_swing_points(self, candles: List[Candle], window: int = 5) -> Tuple[List[Dict], List[Dict]]:
         """Get swing highs and lows for structure analysis."""
