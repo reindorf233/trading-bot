@@ -3,11 +3,18 @@ Real-time market data provider for accurate asset pricing
 """
 
 import asyncio
-import aiohttp
 import json
 from typing import Dict, Optional, Tuple
 from datetime import datetime, timedelta
 import logging
+
+# Try to import aiohttp, make it optional
+try:
+    import aiohttp
+    AIOHTTP_AVAILABLE = True
+except ImportError:
+    AIOHTTP_AVAILABLE = False
+    aiohttp = None
 
 logger = logging.getLogger(__name__)
 
@@ -18,9 +25,14 @@ class MarketDataProvider:
     def __init__(self):
         self.cache = {}
         self.cache_timeout = 300  # 5 minutes cache
+        self.available = AIOHTTP_AVAILABLE
         
     async def get_current_price(self, symbol: str) -> Optional[float]:
         """Get current market price for symbol."""
+        if not self.available:
+            logger.warning("aiohttp not available - market data disabled")
+            return None
+        
         # Check cache first
         cache_key = f"price_{symbol}"
         if cache_key in self.cache:

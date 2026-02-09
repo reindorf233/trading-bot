@@ -86,7 +86,15 @@ class SMCEngineFinal:
     def __init__(self, provider: MarketDataProvider, config: Config):
         self.provider = provider
         self.config = config
-        self.market_data_provider = MarketDataOnlineProvider()
+        # Initialize market data provider with error handling
+        try:
+            from ..providers.market_data import MarketDataOnlineProvider
+            self.market_data_provider = MarketDataOnlineProvider()
+            self.market_data_available = True
+        except Exception as e:
+            logger.warning(f"Market data provider not available: {e}")
+            self.market_data_provider = None
+            self.market_data_available = False
     
     def _is_crypto_pair(self, symbol: str) -> bool:
         """Detect if symbol is a cryptocurrency pair."""
@@ -110,9 +118,10 @@ class SMCEngineFinal:
         """Get realistic price range for symbol using real-time market data."""
         try:
             # Try to get real-time price range from market data provider
-            price_range = await self.market_data_provider.get_price_range(symbol)
-            if price_range and price_range[0] > 0 and price_range[1] > 0:
-                return price_range
+            if self.market_data_available and self.market_data_provider:
+                price_range = await self.market_data_provider.get_price_range(symbol)
+                if price_range and price_range[0] > 0 and price_range[1] > 0:
+                    return price_range
         except Exception as e:
             logger.warning(f"Failed to get real-time price range for {symbol}: {e}")
         
