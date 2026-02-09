@@ -10,6 +10,7 @@ from datetime import datetime, timedelta
 import numpy as np
 
 from ..providers.base import MarketDataProvider, Candle, DataProviderError
+from ..providers.market_data import MarketDataOnlineProvider
 from ..config import Config
 
 
@@ -85,6 +86,7 @@ class SMCEngineFinal:
     def __init__(self, provider: MarketDataProvider, config: Config):
         self.provider = provider
         self.config = config
+        self.market_data_provider = MarketDataOnlineProvider()
     
     def _is_crypto_pair(self, symbol: str) -> bool:
         """Detect if symbol is a cryptocurrency pair."""
@@ -104,8 +106,21 @@ class SMCEngineFinal:
         index_prefixes = ['US', 'NAS', 'SPX', 'DAX', 'FTSE', 'Nikkei', 'CAC', 'STOXX']
         return any(symbol.startswith(prefix) for prefix in index_prefixes)
     
-    def _get_realistic_price_range(self, symbol: str) -> Tuple[float, float]:
-        """Get realistic price range for symbol."""
+    async def _get_realistic_price_range(self, symbol: str) -> Tuple[float, float]:
+        """Get realistic price range for symbol using real-time market data."""
+        try:
+            # Try to get real-time price range from market data provider
+            price_range = await self.market_data_provider.get_price_range(symbol)
+            if price_range and price_range[0] > 0 and price_range[1] > 0:
+                return price_range
+        except Exception as e:
+            logger.warning(f"Failed to get real-time price range for {symbol}: {e}")
+        
+        # Fallback to hardcoded ranges if real-time data fails
+        return self._get_fallback_price_range(symbol)
+    
+    def _get_fallback_price_range(self, symbol: str) -> Tuple[float, float]:
+        """Fallback price range if real-time data is unavailable."""
         if self._is_crypto_pair(symbol):
             if symbol.startswith('BTC'):
                 return (60000, 100000)  # BTC range
@@ -886,7 +901,7 @@ class SMCEngineFinal:
         try:
             if manual_input:
                 analysis.data_status = "Manual mode"
-                return self._analyze_manual_input(analysis, manual_input)
+                return await self._analyze_manual_input(analysis, manual_input)
             
             # Try Deriv WebSocket first
             try:
@@ -981,8 +996,8 @@ class SMCEngineFinal:
             
             analysis.poi_type = random.choice(poi_types)
             
-            # Generate realistic zones based on symbol type
-            price_range = self._get_realistic_price_range(symbol)
+            # Generate realistic zones based on symbol type using real-time data
+            price_range = await self._get_realistic_price_range(symbol)
             base_price = (price_range[0] + price_range[1]) / 2
             
             if self._is_crypto_pair(symbol):
@@ -1078,7 +1093,7 @@ class SMCEngineFinal:
             
             return analysis
     
-    def _analyze_manual_input(self, analysis: SMCAnalysisFinal, manual_input: str) -> SMCAnalysisFinal:
+    async def _analyze_manual_input(self, analysis: SMCAnalysisFinal, manual_input: str) -> SMCAnalysisFinal:
         """Analyze based on manual user input."""
         analysis.data_status = "Manual mode"
         
@@ -1113,8 +1128,8 @@ class SMCEngineFinal:
                 analysis.confirmation_pattern = conf.upper().replace("BB", "MSS + BB")
                 break
         
-        # Generate realistic zones based on symbol type
-        price_range = self._get_realistic_price_range(analysis.symbol)
+        # Generate realistic zones based on symbol type using real-time data
+        price_range = await self._get_realistic_price_range(analysis.symbol)
         base_price = (price_range[0] + price_range[1]) / 2
         
         if self._is_crypto_pair(analysis.symbol):
